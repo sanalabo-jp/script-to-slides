@@ -19,7 +19,12 @@ export async function generatePptx(
   // ===== Content Slides (1 line = 1 slide) =====
   for (const line of parsedScript.lines) {
     const slideAnalysis = analysis.slides.find((s) => s.lineNumber === line.lineNumber);
-    const theme = analysis.themes[line.role];
+    // Theme lookup: try speaker name first, then role, then speaker[role] combined key
+    const theme =
+      analysis.themes[line.speaker] ||
+      analysis.themes[line.role] ||
+      analysis.themes[`${line.speaker}[${line.role}]`] ||
+      Object.values(analysis.themes)[0]; // ultimate fallback: first theme
 
     if (!theme) continue;
 
@@ -41,9 +46,13 @@ function addTitleSlide(
 ): void {
   const slide = pptx.addSlide();
 
-  // Use the first role's theme for the title slide
+  // Use the first speaker/role's theme for the title slide
+  const firstSpeaker = parsedScript.metadata.speakers[0];
   const firstRole = parsedScript.metadata.roles[0];
-  const theme = analysis.themes[firstRole];
+  const theme =
+    analysis.themes[firstSpeaker] ||
+    analysis.themes[firstRole] ||
+    Object.values(analysis.themes)[0];
   const config = theme ? themeToSlideConfig(theme) : null;
 
   if (config) {

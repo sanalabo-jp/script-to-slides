@@ -4,65 +4,101 @@ export function buildAnalysisPrompt(lines: ScriptLine[]): string {
   const scriptText = lines
     .map((l) => {
       const desc = l.description ? `(${l.description}) ` : '';
-      return `${l.speaker}[${l.role}]: ${desc}${l.dialogue}`;
+      return `[Line ${l.lineNumber}] ${l.speaker}[${l.role}]: ${desc}${l.dialogue}`;
     })
     .join('\n');
 
   const roles = [...new Set(lines.map((l) => l.role))];
   const speakers = [...new Set(lines.map((l) => l.speaker))];
+  const speakerRoleMap = speakers
+    .map((s) => {
+      const line = lines.find((l) => l.speaker === s);
+      return `"${s}": role="${line?.role}"`;
+    })
+    .join(', ');
 
-  return `You are a presentation design expert. Analyze the following lecture/broadcast script and generate a structured JSON response for creating PowerPoint slides.
+  return `You are a professional presentation designer. Your job is to analyze a lecture/broadcast script and output a STRICT JSON object that will be used to auto-generate PowerPoint slides.
 
-## Script Information
-- Speakers: ${speakers.join(', ')}
-- Roles: ${roles.join(', ')}
-- Total lines: ${lines.length}
+## Context
+This script has ${lines.length} lines from ${speakers.length} speakers.
+Speakers: ${speakerRoleMap}
+Each line in the script becomes exactly ONE slide in the presentation.
 
-## Script Content
+## Script
 ${scriptText}
 
-## Your Task
+## Instructions
 
-For each role, design a slide theme (colors, font style, mood).
-For each line, analyze the description (scene direction) to suggest visual elements, and determine if the dialogue needs supplementary explanation.
+### 1. Themes (one per speaker)
+Design a unique visual theme for EACH SPEAKER (not each role).
+The theme key MUST be the speaker's name exactly as written above.
+Consider the speaker's role and personality when choosing colors and mood.
 
-## Response Format (strict JSON)
+Theme requirements:
+- backgroundColor: a hex color for the slide background (light/pastel tones recommended for readability)
+- primaryColor: hex color for main text (must contrast well against backgroundColor)
+- accentColor: hex color for decorative elements and highlights
+- fontFamily: one of "Arial", "Georgia", "Verdana", "Trebuchet MS", "Courier New"
+- mood: one of "professional", "casual", "dramatic", "warm", "serious", "playful"
+
+### 2. Slides (one per script line, MUST match lineNumber exactly)
+For EVERY line in the script, create a slide entry. You MUST create exactly ${lines.length} slide entries with lineNumber values from 1 to ${lines.length}.
+
+For each slide:
+
+**visual** (required): Derive visual elements from the DESCRIPTION (stage direction in parentheses), NOT from the dialogue.
+- shapeType: "rectangle" | "circle" | "arrow" | "star" | "diamond" | "triangle" | "cloud" | "heart" | "none"
+- shapeColor: hex color that complements the speaker's theme
+- position: "background" | "top-right" | "bottom-left" | "center-back" | "left-side" | "right-side"
+- emoji: a single emoji that represents the scene mood (e.g., "🎬" for studio, "📊" for graph)
+- backgroundGradient: optional, { "from": "#hex", "to": "#hex" } for atmospheric scenes
+
+**supplementary** (optional): ONLY include when the dialogue contains technical terms, statistics, or complex concepts.
+- text: a brief 1-2 sentence explanation in the SAME LANGUAGE as the dialogue
+- keywords: array of 2-4 key terms from the dialogue
+
+Do NOT add supplementary for simple greetings, transitions, or casual speech.
+
+## Required Output Format
+
+Return ONLY this JSON structure with no extra text, no markdown fences, no explanation:
 
 {
   "themes": {
-    "<role>": {
+    "${speakers[0]}": {
       "backgroundColor": "#hex",
-      "primaryColor": "#hex (text/heading color)",
-      "accentColor": "#hex (decorative elements)",
-      "fontFamily": "font name (use web-safe fonts: Arial, Georgia, Verdana, Trebuchet MS, Courier New)",
-      "mood": "professional | casual | dramatic | warm | serious | playful"
-    }
+      "primaryColor": "#hex",
+      "accentColor": "#hex",
+      "fontFamily": "Arial",
+      "mood": "professional"
+    }${speakers.length > 1 ? `,\n    "${speakers[1]}": { ... }` : ''}
   },
   "slides": [
     {
-      "lineNumber": <original line number>,
+      "lineNumber": 1,
       "visual": {
-        "shapeType": "rectangle | circle | arrow | star | diamond | triangle | cloud | heart | none",
+        "shapeType": "rectangle",
         "shapeColor": "#hex",
-        "position": "background | top-right | bottom-left | center-back | left-side | right-side",
-        "emoji": "<single emoji representing the mood, optional>",
-        "backgroundGradient": {
-          "from": "#hex",
-          "to": "#hex"
-        }
+        "position": "top-right",
+        "emoji": "🎬",
+        "backgroundGradient": { "from": "#hex", "to": "#hex" }
       },
       "supplementary": {
-        "text": "<brief explanation to help understand the dialogue content, 1-2 sentences max>",
+        "text": "Explanation text in same language as dialogue",
         "keywords": ["keyword1", "keyword2"]
       }
+    },
+    {
+      "lineNumber": 2,
+      "visual": { "shapeType": "circle", "shapeColor": "#hex", "position": "background", "emoji": "😊" }
     }
   ]
 }
 
-## Rules
-1. Theme colors should reflect the role's personality (e.g., teacher = calm blues, anchor = formal darks).
-2. Visual elements should reflect the DESCRIPTION (scene direction), not the dialogue content.
-3. Supplementary text is OPTIONAL — only include it when the dialogue contains technical terms, specific information, or complex concepts that benefit from brief explanation. For simple greetings or casual dialogue, omit the "supplementary" field entirely.
-4. Use harmonious color palettes. Background and text colors must have sufficient contrast.
-5. Return ONLY valid JSON, no markdown, no explanation.`;
+## Critical Rules
+1. Theme keys MUST be speaker names: ${speakers.map((s) => `"${s}"`).join(', ')}
+2. You MUST output exactly ${lines.length} slide entries in the "slides" array (lineNumber 1 through ${lines.length}).
+3. Every slide MUST have a "visual" object. "supplementary" is optional.
+4. Colors must provide good contrast (dark text on light background or vice versa).
+5. Return ONLY valid JSON. No markdown, no comments, no explanation before or after the JSON.`;
 }

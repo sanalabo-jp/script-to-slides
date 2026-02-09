@@ -13,7 +13,7 @@ export const POST: RequestHandler = async ({ request }) => {
   }
 
   const apiKey = GEMINI_API_KEY;
-  const model = GEMINI_MODEL || 'gemini-2.5-flash';
+  const model = GEMINI_MODEL || 'gemini-3-flash';
 
   // If no API key, use fallback
   if (!apiKey) {
