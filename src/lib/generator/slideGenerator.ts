@@ -202,9 +202,13 @@ function addContentSlide(
       line: { color: config.accentColor, width: 0.5 },
     });
 
-    const supText = slideAnalysis.supplementary.keywords?.length
-      ? `${slideAnalysis.supplementary.text}\n[${slideAnalysis.supplementary.keywords.join(', ')}]`
-      : slideAnalysis.supplementary.text;
+    const supMainText = String(slideAnalysis.supplementary.text || '');
+    const keywords = Array.isArray(slideAnalysis.supplementary.keywords)
+      ? slideAnalysis.supplementary.keywords.map(String)
+      : [];
+    const supText = keywords.length
+      ? `${supMainText}\n[${keywords.join(', ')}]`
+      : supMainText;
 
     slide.addText(supText, {
       x: 0.8,

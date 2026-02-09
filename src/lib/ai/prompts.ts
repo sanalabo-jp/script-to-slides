@@ -51,7 +51,6 @@ For each slide:
 - shapeColor: hex color that complements the speaker's theme
 - position: "background" | "top-right" | "bottom-left" | "center-back" | "left-side" | "right-side"
 - emoji: a single emoji that represents the scene mood (e.g., "🎬" for studio, "📊" for graph)
-- backgroundGradient: optional, { "from": "#hex", "to": "#hex" } for atmospheric scenes
 
 **supplementary** (optional): ONLY include when the dialogue contains technical terms, statistics, or complex concepts.
 - text: a brief 1-2 sentence explanation in the SAME LANGUAGE as the dialogue
@@ -80,8 +79,7 @@ Return ONLY this JSON structure with no extra text, no markdown fences, no expla
         "shapeType": "rectangle",
         "shapeColor": "#hex",
         "position": "top-right",
-        "emoji": "🎬",
-        "backgroundGradient": { "from": "#hex", "to": "#hex" }
+        "emoji": "🎬"
       },
       "supplementary": {
         "text": "Explanation text in same language as dialogue",
@@ -100,5 +98,6 @@ Return ONLY this JSON structure with no extra text, no markdown fences, no expla
 2. You MUST output exactly ${lines.length} slide entries in the "slides" array (lineNumber 1 through ${lines.length}).
 3. Every slide MUST have a "visual" object. "supplementary" is optional.
 4. Colors must provide good contrast (dark text on light background or vice versa).
-5. Return ONLY valid JSON. No markdown, no comments, no explanation before or after the JSON.`;
+5. Return ONLY valid JSON. No markdown, no comments, no explanation before or after the JSON.
+6. ALL color values MUST be hex strings (e.g., "#2E86C1"). Never use objects or arrays for colors.`;
 }

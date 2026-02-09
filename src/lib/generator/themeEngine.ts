@@ -2,7 +2,7 @@ import type { SlideTheme } from '$lib/types';
 
 // pptxgenjs-compatible theme configuration
 export interface PptxTheme {
-  background: { color: string } | { fill: { type: string; color1: string; color2: string; angle: number } };
+  background: { color: string };
   titleStyle: {
     color: string;
     fontFace: string;
@@ -33,29 +33,37 @@ const FONT_SIZE_MAP: Record<string, { title: number; body: number; caption: numb
   playful: { title: 34, body: 24, caption: 16 },
 };
 
+/** Safely convert any value to a hex color string (without #) */
+function safeColor(value: unknown, fallback = '333333'): string {
+  if (typeof value !== 'string') return fallback;
+  return value.replace('#', '') || fallback;
+}
+
 export function themeToSlideConfig(theme: SlideTheme): PptxTheme {
-  const sizes = FONT_SIZE_MAP[theme.mood] || FONT_SIZE_MAP.professional;
+  const mood = typeof theme.mood === 'string' ? theme.mood : 'professional';
+  const sizes = FONT_SIZE_MAP[mood] || FONT_SIZE_MAP.professional;
+  const fontFamily = typeof theme.fontFamily === 'string' ? theme.fontFamily : 'Arial';
 
   return {
-    background: { color: theme.backgroundColor.replace('#', '') },
+    background: { color: safeColor(theme.backgroundColor, 'F8F9FA') },
     titleStyle: {
-      color: theme.primaryColor.replace('#', ''),
-      fontFace: theme.fontFamily || 'Arial',
+      color: safeColor(theme.primaryColor, '1A1A2E'),
+      fontFace: fontFamily,
       fontSize: sizes.title,
       bold: true,
     },
     bodyStyle: {
-      color: theme.primaryColor.replace('#', ''),
-      fontFace: theme.fontFamily || 'Arial',
+      color: safeColor(theme.primaryColor, '2D3436'),
+      fontFace: fontFamily,
       fontSize: sizes.body,
     },
     captionStyle: {
-      color: theme.accentColor.replace('#', ''),
-      fontFace: theme.fontFamily || 'Arial',
+      color: safeColor(theme.accentColor, '636E72'),
+      fontFace: fontFamily,
       fontSize: sizes.caption,
       italic: true,
     },
-    accentColor: theme.accentColor.replace('#', ''),
-    mood: theme.mood,
+    accentColor: safeColor(theme.accentColor, '636E72'),
+    mood,
   };
 }
