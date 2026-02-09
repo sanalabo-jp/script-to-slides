@@ -146,7 +146,7 @@ function addContentSlide(
     slide.addShape('roundRect' as PptxGenJS.ShapeType, {
       x: 0.5,
       y: 0.85,
-      w: 'auto' as unknown as number,
+      w: Math.min(line.description!.length * 0.15 + 1.0, 6.0),
       h: 0.4,
       fill: { color: config.accentColor },
       rectRadius: 0.1,

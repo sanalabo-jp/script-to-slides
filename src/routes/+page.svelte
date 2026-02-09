@@ -71,25 +71,17 @@
     errorMsg = '';
 
     try {
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          parsedScript: parseResult,
-          analysis,
-          format: outputFormat,
-        }),
+      // Client-side PPTX generation (avoids Vercel serverless ESM issues)
+      const { generatePptx } = await import('$lib/generator/slideGenerator');
+      const pptxData = await generatePptx(parseResult, analysis);
+
+      const blob = new Blob([pptxData], {
+        type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
       });
-
-      if (!res.ok) {
-        throw new Error(`Generation failed: HTTP ${res.status}`);
-      }
-
-      const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `presentation.${outputFormat === 'pdf' ? 'pptx' : 'pptx'}`;
+      a.download = 'presentation.pptx';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
