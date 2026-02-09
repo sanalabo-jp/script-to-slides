@@ -11,13 +11,21 @@ export async function analyzeScript(
 
   const prompt = buildAnalysisPrompt(lines);
 
+  // For thinking/preview models, limit thinking budget to avoid timeouts
+  const isThinkingModel = model.includes('preview') || model.includes('2.5');
+  const config: Record<string, unknown> = {
+    responseMimeType: 'application/json',
+    temperature: 0.7,
+  };
+
+  if (isThinkingModel) {
+    config.thinkingConfig = { thinkingBudget: 2048 };
+  }
+
   const response = await ai.models.generateContent({
     model,
     contents: prompt,
-    config: {
-      responseMimeType: 'application/json',
-      temperature: 0.7,
-    },
+    config,
   });
 
   const text = response.text ?? '';
@@ -50,34 +58,50 @@ export async function analyzeScript(
  */
 export function fallbackAnalysis(lines: ScriptLine[]): GeminiAnalysisResult {
   const roles = [...new Set(lines.map((l) => l.role))];
+  const speakers = [...new Set(lines.map((l) => l.speaker))];
 
-  const defaultPalettes: Record<string, { bg: string; primary: string; accent: string }> = {
-    teacher: { bg: '#EBF5FB', primary: '#1A5276', accent: '#2E86C1' },
-    student: { bg: '#EAFAF1', primary: '#1E8449', accent: '#27AE60' },
-    anchor: { bg: '#F4F6F7', primary: '#2C3E50', accent: '#7F8C8D' },
-    host: { bg: '#FEF9E7', primary: '#7D6608', accent: '#F1C40F' },
-    narrator: { bg: '#F5EEF8', primary: '#6C3483', accent: '#A569BD' },
-  };
+  // Palette rotation for multiple speakers
+  const palettes = [
+    { bg: '#EBF5FB', primary: '#1A5276', accent: '#2E86C1' },
+    { bg: '#EAFAF1', primary: '#1E8449', accent: '#27AE60' },
+    { bg: '#F5EEF8', primary: '#6C3483', accent: '#A569BD' },
+    { bg: '#FEF9E7', primary: '#7D6608', accent: '#F1C40F' },
+    { bg: '#FDEDEC', primary: '#922B21', accent: '#E74C3C' },
+    { bg: '#F4F6F7', primary: '#2C3E50', accent: '#7F8C8D' },
+  ];
 
-  const fallbackPalette = { bg: '#F8F9FA', primary: '#2D3436', accent: '#636E72' };
-
+  // Create themes keyed by speaker name (matching AI output format)
   const themes: GeminiAnalysisResult['themes'] = {};
-  for (const role of roles) {
-    const palette = defaultPalettes[role.toLowerCase()] || fallbackPalette;
-    themes[role] = {
+  speakers.forEach((speaker, i) => {
+    const palette = palettes[i % palettes.length];
+    themes[speaker] = {
       backgroundColor: palette.bg,
       primaryColor: palette.primary,
       accentColor: palette.accent,
       fontFamily: 'Arial',
       mood: 'professional',
     };
-  }
+  });
+
+  // Also add themes keyed by role for backward compatibility
+  roles.forEach((role, i) => {
+    if (!themes[role]) {
+      const palette = palettes[i % palettes.length];
+      themes[role] = {
+        backgroundColor: palette.bg,
+        primaryColor: palette.primary,
+        accentColor: palette.accent,
+        fontFamily: 'Arial',
+        mood: 'professional',
+      };
+    }
+  });
 
   const slides: GeminiAnalysisResult['slides'] = lines.map((line) => ({
     lineNumber: line.lineNumber,
     visual: {
       shapeType: 'none',
-      shapeColor: themes[line.role]?.accentColor || fallbackPalette.accent,
+      shapeColor: themes[line.speaker]?.accentColor || themes[line.role]?.accentColor || '#636E72',
       position: 'background',
     },
   }));
