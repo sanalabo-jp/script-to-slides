@@ -123,6 +123,26 @@ export interface GeminiAnalysisResult {
   slides: SlideAnalysis[];
 }
 
+// === Chat Input Types ===
+
+export interface ChatMessage {
+  id: string;
+  speakerId: string;
+  dialogue: string;
+  visualHint: string;
+  metadata: Record<string, string>;
+  timestamp: number;
+  isEditing: boolean;
+}
+
+export interface SpeakerProfile {
+  id: string;
+  name: string;
+  role: string;
+  color: string;
+  isDefault: boolean;
+}
+
 // === App State Types ===
 
 export type AppStep =
