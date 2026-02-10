@@ -13,36 +13,36 @@
   };
 </script>
 
-<div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-  <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+<div class="t-card overflow-hidden">
+  <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
     <div>
-      <h2 class="font-semibold text-gray-800">Script Preview</h2>
-      <p class="text-sm text-gray-500 mt-1">
-        {parseResult.metadata.validLines} valid lines of {parseResult.metadata.totalLines} total
+      <h2 class="text-sm font-mono font-semibold text-gray-800">Script Preview</h2>
+      <p class="text-xs text-gray-500 mt-0.5 font-mono">
+        {parseResult.metadata.validLines} valid / {parseResult.metadata.totalLines} total
         · {parseResult.metadata.speakers.length} speaker{parseResult.metadata.speakers.length !== 1 ? 's' : ''}
       </p>
     </div>
-    <div class="flex items-center gap-2">
+    <div>
       {#if parseResult.isValid}
-        <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">Valid</span>
+        <span class="px-2 py-0.5 border border-green-400 text-green-700 text-xs font-mono">valid</span>
       {:else}
-        <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">Invalid</span>
+        <span class="px-2 py-0.5 border border-red-400 text-red-700 text-xs font-mono">invalid</span>
       {/if}
     </div>
   </div>
 
   <!-- Front matter -->
   {#if parseResult.frontMatter.topic}
-    <div class="px-6 py-3 bg-indigo-50 border-b border-indigo-100">
-      <div class="flex items-center gap-3 text-sm">
-        <span class="px-2 py-0.5 bg-indigo-200 text-indigo-700 rounded text-xs font-medium">
+    <div class="px-4 py-2 bg-gray-50 border-b border-gray-200">
+      <div class="flex items-center gap-2 text-xs font-mono">
+        <span class="px-1.5 py-0.5 border border-gray-300 text-gray-700">
           {typeLabels[parseResult.frontMatter.type] || 'General'}
         </span>
-        <span class="text-indigo-700 font-medium">{parseResult.frontMatter.topic}</span>
+        <span class="text-gray-700">{parseResult.frontMatter.topic}</span>
         {#if parseResult.frontMatter.categories.length > 0}
-          <span class="text-indigo-400">·</span>
+          <span class="text-gray-300">|</span>
           {#each parseResult.frontMatter.categories as cat}
-            <span class="text-xs text-indigo-500">{cat}</span>
+            <span class="text-gray-500">{cat}</span>
           {/each}
         {/if}
       </div>
@@ -50,52 +50,52 @@
   {/if}
 
   <!-- Speakers summary -->
-  <div class="px-6 py-3 bg-gray-50 border-b border-gray-100 flex flex-wrap gap-2">
+  <div class="px-4 py-2 border-b border-gray-200 flex flex-wrap gap-1.5">
     {#each parseResult.metadata.speakers as speaker}
-      <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+      <span class="px-1.5 py-0.5 border border-gray-300 text-xs font-mono text-gray-700">
         {speaker.name} [{speaker.role}]
       </span>
     {/each}
   </div>
 
   <!-- Slides -->
-  <div class="max-h-80 overflow-y-auto divide-y divide-gray-50">
+  <div class="max-h-80 overflow-y-auto divide-y divide-gray-100">
     {#each parseResult.slides as slide}
-      <div class="px-6 py-3 hover:bg-gray-50 transition-colors">
-        <div class="flex items-center gap-2 mb-1">
+      <div class="px-4 py-2 hover:bg-gray-50 transition-colors">
+        <div class="flex items-center gap-2 mb-0.5">
           <span class="text-xs text-gray-400 font-mono w-6">#{slide.lineNumber}</span>
-          <span class="font-medium text-gray-700 text-sm">{slide.speaker.name}</span>
-          <span class="text-xs text-gray-400">[{slide.speaker.role}]</span>
+          <span class="font-mono text-gray-700 text-xs font-medium">{slide.speaker.name}</span>
+          <span class="text-xs text-gray-400 font-mono">[{slide.speaker.role}]</span>
           {#if slide.visualHint}
-            <span class="text-xs text-purple-600 italic">({slide.visualHint})</span>
+            <span class="text-xs text-gray-500">({slide.visualHint})</span>
           {/if}
         </div>
         {#if Object.keys(slide.metadata).length > 0}
-          <div class="ml-8 mb-1">
+          <div class="ml-8 mb-0.5">
             {#each Object.entries(slide.metadata) as [key, value]}
-              <span class="text-xs text-gray-400 mr-2">{key}: {value}</span>
+              <span class="text-xs text-gray-400 font-mono mr-2">--{key}: {value}</span>
             {/each}
           </div>
         {/if}
-        <p class="ml-8 text-gray-600 text-sm">{slide.context}</p>
+        <p class="ml-8 text-gray-600 text-xs leading-relaxed">{slide.context}</p>
       </div>
     {/each}
   </div>
 
   <!-- Errors -->
   {#if parseResult.errors.length > 0}
-    <div class="px-6 py-3 bg-amber-50 border-t border-amber-100">
-      <p class="text-sm font-medium text-amber-700 mb-2">
-        {parseResult.errors.length} line{parseResult.errors.length !== 1 ? 's' : ''} could not be parsed:
+    <div class="px-4 py-2 border-t border-gray-200 border-l-2 border-l-red-300 bg-white">
+      <p class="text-xs font-mono text-red-700 mb-1">
+        [error] {parseResult.errors.length} line{parseResult.errors.length !== 1 ? 's' : ''} could not be parsed:
       </p>
-      <div class="max-h-32 overflow-y-auto space-y-1">
+      <div class="max-h-32 overflow-y-auto space-y-0.5">
         {#each parseResult.errors.slice(0, 5) as err}
-          <p class="text-xs text-amber-600 font-mono truncate">
-            Line {err.line}: {err.content}
+          <p class="text-xs text-gray-500 font-mono truncate">
+            L{err.line}: {err.content}
           </p>
         {/each}
         {#if parseResult.errors.length > 5}
-          <p class="text-xs text-amber-500 italic">...and {parseResult.errors.length - 5} more</p>
+          <p class="text-xs text-gray-400 font-mono">...and {parseResult.errors.length - 5} more</p>
         {/if}
       </div>
     </div>
