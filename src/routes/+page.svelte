@@ -88,12 +88,12 @@
 <div class="space-y-4">
   <!-- Step indicator -->
   <div class="flex items-center gap-1.5 text-xs font-mono">
-    {#each ['Script', 'Template', 'Generate'] as label, i}
-      {@const stepMap = { upload: 0, preview: 0, template: 1, analyzing: 2, ready: 2, generating: 2, done: 2, error: 0 }}
+    {#each ['Upload', 'Preview', 'Template', 'Generate'] as label, i}
+      {@const stepMap = { upload: 0, preview: 1, template: 2, analyzing: 3, ready: 3, generating: 3, done: 3, error: 0 }}
       {@const currentIndex = stepMap[step] ?? 0}
       {@const isActive = i <= currentIndex}
       <span class="{isActive ? 'text-gray-900 font-semibold' : 'text-gray-400'}">[{i + 1}] {label}</span>
-      {#if i < 2}
+      {#if i < 3}
         <span class="text-gray-300">&mdash;</span>
       {/if}
     {/each}
@@ -111,7 +111,7 @@
     <FileUpload onFileSelected={handleFileSelected} />
   {/if}
 
-  <!-- Step 1: Preview -->
+  <!-- Step 2: Preview -->
   {#if step === 'preview' && parseResult}
     <ScriptPreview {parseResult} />
 
@@ -121,7 +121,7 @@
           class="t-btn-text"
           onclick={handleReset}
         >
-          &larr; Upload another file
+          &larr; Re-upload
         </button>
         <button
           class="t-btn"
@@ -135,12 +135,12 @@
         class="t-btn-text"
         onclick={handleReset}
       >
-        &larr; Upload another file
+        &larr; Re-upload
       </button>
     {/if}
   {/if}
 
-  <!-- Step 2: Template Selection -->
+  <!-- Step 3: Template Selection -->
   {#if step === 'template'}
     <TemplateSelector {selectedTemplate} onSelect={handleTemplateSelect} />
 
@@ -178,7 +178,7 @@
     </div>
   {/if}
 
-  <!-- Generating step -->
+  <!-- Step 4: Generating -->
   {#if step === 'generating'}
     <div class="t-card p-8 text-center">
       <p class="text-sm font-mono text-gray-700">Generating presentation<span class="animate-blink">...</span></p>
@@ -186,7 +186,7 @@
     </div>
   {/if}
 
-  <!-- Done step -->
+  <!-- Step 4: Done -->
   {#if step === 'done'}
     <div class="t-card p-8 text-center">
       <p class="text-sm font-mono text-gray-800">[done] Presentation downloaded.</p>

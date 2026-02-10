@@ -63,16 +63,24 @@
 }
 
 @keyframes guide-attention {
-  0%, 100% {
+  0% {
     border-color: var(--color-gray-200);
     background-color: transparent;
   }
-  50% {
-    border-color: var(--color-gray-400);
-    background-color: var(--color-gray-50);
+  15% {
+    border-color: var(--color-gray-900);
+    background-color: var(--color-gray-100);
+  }
+  70% {
+    border-color: var(--color-gray-200);
+    background-color: transparent;
+  }
+  100% {
+    border-color: var(--color-gray-200);
+    background-color: transparent;
   }
 }
 
 .animate-guide-attention {
-  animation: guide-attention 3s ease-in-out infinite;
+  animation: guide-attention 1.8s ease-out infinite;
 }
