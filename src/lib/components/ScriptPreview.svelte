@@ -1,7 +1,16 @@
 <script lang="ts">
   import type { ParseResult } from '$lib/types';
+  import { ScriptType } from '$lib/types';
 
   let { parseResult }: { parseResult: ParseResult } = $props();
+
+  const typeLabels: Record<number, string> = {
+    [ScriptType.General]: 'General',
+    [ScriptType.Drama]: 'Drama',
+    [ScriptType.Lecture]: 'Lecture',
+    [ScriptType.News]: 'News',
+    [ScriptType.Interview]: 'Interview',
+  };
 </script>
 
 <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -22,28 +31,53 @@
     </div>
   </div>
 
+  <!-- Front matter -->
+  {#if parseResult.frontMatter.topic}
+    <div class="px-6 py-3 bg-indigo-50 border-b border-indigo-100">
+      <div class="flex items-center gap-3 text-sm">
+        <span class="px-2 py-0.5 bg-indigo-200 text-indigo-700 rounded text-xs font-medium">
+          {typeLabels[parseResult.frontMatter.type] || 'General'}
+        </span>
+        <span class="text-indigo-700 font-medium">{parseResult.frontMatter.topic}</span>
+        {#if parseResult.frontMatter.categories.length > 0}
+          <span class="text-indigo-400">·</span>
+          {#each parseResult.frontMatter.categories as cat}
+            <span class="text-xs text-indigo-500">{cat}</span>
+          {/each}
+        {/if}
+      </div>
+    </div>
+  {/if}
+
   <!-- Speakers summary -->
   <div class="px-6 py-3 bg-gray-50 border-b border-gray-100 flex flex-wrap gap-2">
-    {#each parseResult.metadata.speakers as speaker, i}
+    {#each parseResult.metadata.speakers as speaker}
       <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
-        {speaker} [{parseResult.metadata.roles[i] || '?'}]
+        {speaker.name} [{speaker.role}]
       </span>
     {/each}
   </div>
 
-  <!-- Lines -->
+  <!-- Slides -->
   <div class="max-h-80 overflow-y-auto divide-y divide-gray-50">
-    {#each parseResult.lines as line}
+    {#each parseResult.slides as slide}
       <div class="px-6 py-3 hover:bg-gray-50 transition-colors">
         <div class="flex items-center gap-2 mb-1">
-          <span class="text-xs text-gray-400 font-mono w-6">#{line.lineNumber}</span>
-          <span class="font-medium text-gray-700 text-sm">{line.speaker}</span>
-          <span class="text-xs text-gray-400">[{line.role}]</span>
-          {#if line.description}
-            <span class="text-xs text-purple-600 italic">({line.description})</span>
+          <span class="text-xs text-gray-400 font-mono w-6">#{slide.lineNumber}</span>
+          <span class="font-medium text-gray-700 text-sm">{slide.speaker.name}</span>
+          <span class="text-xs text-gray-400">[{slide.speaker.role}]</span>
+          {#if slide.visualHint}
+            <span class="text-xs text-purple-600 italic">({slide.visualHint})</span>
           {/if}
         </div>
-        <p class="ml-8 text-gray-600 text-sm">{line.dialogue}</p>
+        {#if Object.keys(slide.metadata).length > 0}
+          <div class="ml-8 mb-1">
+            {#each Object.entries(slide.metadata) as [key, value]}
+              <span class="text-xs text-gray-400 mr-2">{key}: {value}</span>
+            {/each}
+          </div>
+        {/if}
+        <p class="ml-8 text-gray-600 text-sm">{slide.context}</p>
       </div>
     {/each}
   </div>
