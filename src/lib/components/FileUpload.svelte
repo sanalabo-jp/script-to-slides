@@ -9,7 +9,7 @@
 
   let isDragging = $state(false);
   let errorMsg = $state('');
-  let guideOpen = $state(true);
+  let guideOpen = $state(false);
 
   function handleFile(file: File) {
     errorMsg = '';
@@ -49,7 +49,7 @@
 <div class="space-y-4">
   <!-- Upload area -->
   <div
-    class="border border-dashed p-8 text-center transition-colors cursor-pointer
+    class="border border-dashed py-24 px-8 text-center transition-colors cursor-pointer
       {isDragging ? 'border-gray-500 bg-gray-50' : 'border-gray-300 bg-white hover:border-gray-400'}"
     role="button"
     tabindex="0"
@@ -59,7 +59,7 @@
     onclick={() => document.getElementById('file-input')?.click()}
     onkeydown={(e) => { if (e.key === 'Enter') document.getElementById('file-input')?.click(); }}
   >
-    <p class="text-sm text-gray-700 mb-1">
+    <p class="text-base text-gray-700 mb-2">
       {isDragging ? 'Drop file here' : 'Drop script file or click to browse'}
     </p>
     <p class="text-xs text-gray-400">
@@ -80,9 +80,13 @@
   </div>
 
   <!-- v2 Format Guide -->
-  <details class="t-card" bind:open={guideOpen}>
-    <summary class="px-4 py-3 cursor-pointer text-sm font-mono text-gray-700 hover:text-gray-900 select-none">
-      Script Format Guide (v2)
+  <details
+    class="t-card {!guideOpen ? 'animate-guide-attention' : ''}"
+    bind:open={guideOpen}
+  >
+    <summary class="px-4 py-3 cursor-pointer text-sm font-mono text-gray-500 hover:text-gray-900 select-none flex items-center justify-between">
+      <span>Script Format Guide (v2)</span>
+      <span class="text-xs text-gray-400">{guideOpen ? '' : '[?]'}</span>
     </summary>
     <div class="px-4 pb-4 space-y-4 text-xs text-gray-600">
 

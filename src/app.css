@@ -61,3 +61,18 @@
 .animate-blink {
   animation: blink 1.2s infinite;
 }
+
+@keyframes guide-attention {
+  0%, 100% {
+    border-color: var(--color-gray-200);
+    background-color: transparent;
+  }
+  50% {
+    border-color: var(--color-gray-400);
+    background-color: var(--color-gray-50);
+  }
+}
+
+.animate-guide-attention {
+  animation: guide-attention 3s ease-in-out infinite;
+}
