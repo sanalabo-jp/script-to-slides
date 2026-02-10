@@ -1,11 +1,13 @@
 <script lang="ts">
   import FileUpload from '$lib/components/FileUpload.svelte';
+  import ManualInputMode from '$lib/components/ManualInputMode.svelte';
   import ScriptPreview from '$lib/components/ScriptPreview.svelte';
   import TemplateSelector from '$lib/components/TemplateSelector.svelte';
   import { parseScript, readFileAsText } from '$lib/parser/scriptParser';
   import type { AppStep, ParseResult, SlideTemplate } from '$lib/types';
 
   let step: AppStep = $state('upload');
+  let inputMode: 'file' | 'manual' = $state('file');
   let fileName = $state('');
   let parseResult: ParseResult | null = $state(null);
   let selectedTemplate: SlideTemplate | null = $state(null);
@@ -33,6 +35,12 @@
       errorMsg = `Failed to read file: ${err instanceof Error ? err.message : 'Unknown error'}`;
       step = 'error';
     }
+  }
+
+  function handleManualComplete(result: ParseResult) {
+    parseResult = result;
+    errorMsg = '';
+    step = 'preview';
   }
 
   function handleTemplateSelect(template: SlideTemplate) {
@@ -77,6 +85,7 @@
 
   function handleReset() {
     step = 'upload';
+    inputMode = 'file';
     fileName = '';
     parseResult = null;
     selectedTemplate = null;
@@ -108,7 +117,23 @@
 
   <!-- Step 1: Upload -->
   {#if step === 'upload'}
-    <FileUpload onFileSelected={handleFileSelected} />
+    <!-- Input mode tabs -->
+    <div class="flex gap-0">
+      <button
+        class="input-tab {inputMode === 'file' ? 'input-tab-active' : ''}"
+        onclick={() => { inputMode = 'file'; }}
+      >File</button>
+      <button
+        class="input-tab {inputMode === 'manual' ? 'input-tab-active' : ''}"
+        onclick={() => { inputMode = 'manual'; }}
+      >Manual</button>
+    </div>
+
+    {#if inputMode === 'file'}
+      <FileUpload onFileSelected={handleFileSelected} />
+    {:else}
+      <ManualInputMode onComplete={handleManualComplete} />
+    {/if}
   {/if}
 
   <!-- Step 2: Preview -->
