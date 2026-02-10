@@ -85,31 +85,24 @@
   }
 </script>
 
-<div class="space-y-6">
+<div class="space-y-4">
   <!-- Step indicator -->
-  <div class="flex items-center justify-center gap-2 text-sm">
+  <div class="flex items-center gap-1.5 text-xs font-mono">
     {#each ['Script', 'Template', 'Generate'] as label, i}
       {@const stepMap = { upload: 0, preview: 0, template: 1, analyzing: 2, ready: 2, generating: 2, done: 2, error: 0 }}
       {@const currentIndex = stepMap[step] ?? 0}
       {@const isActive = i <= currentIndex}
-      <div class="flex items-center gap-2">
-        <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium
-          {isActive ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}">
-          {i + 1}
-        </div>
-        <span class="{isActive ? 'text-gray-800 font-medium' : 'text-gray-400'}">{label}</span>
-      </div>
+      <span class="{isActive ? 'text-gray-900 font-semibold' : 'text-gray-400'}">[{i + 1}] {label}</span>
       {#if i < 2}
-        <div class="w-8 h-px {isActive ? 'bg-blue-300' : 'bg-gray-200'}"></div>
+        <span class="text-gray-300">&mdash;</span>
       {/if}
     {/each}
   </div>
 
   <!-- Error banner -->
   {#if errorMsg}
-    <div class="bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex items-start gap-3">
-      <span class="text-red-500 mt-0.5">⚠️</span>
-      <p class="text-sm text-red-700">{errorMsg}</p>
+    <div class="border-l-2 border-red-400 bg-white px-4 py-3">
+      <p class="text-xs font-mono text-red-700"><span class="text-red-500">[error]</span> {errorMsg}</p>
     </div>
   {/if}
 
@@ -125,24 +118,24 @@
     {#if parseResult.isValid}
       <div class="flex items-center justify-between">
         <button
-          class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+          class="t-btn-text"
           onclick={handleReset}
         >
-          ← Upload another file
+          &larr; Upload another file
         </button>
         <button
-          class="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          class="t-btn"
           onclick={handleProceedToTemplate}
         >
-          Select Template →
+          Select Template &rarr;
         </button>
       </div>
     {:else}
       <button
-        class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+        class="t-btn-text"
         onclick={handleReset}
       >
-        ← Upload another file
+        &larr; Upload another file
       </button>
     {/if}
   {/if}
@@ -152,32 +145,31 @@
     <TemplateSelector {selectedTemplate} onSelect={handleTemplateSelect} />
 
     <!-- Format selector -->
-    <div class="bg-white rounded-xl border border-gray-200 p-6">
-      <p class="text-sm font-medium text-gray-600 mb-2">Output Format</p>
+    <div class="t-card p-4">
+      <p class="text-xs font-mono text-gray-600 mb-2">Output Format</p>
       <div class="flex gap-3">
-        <label class="flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer transition-colors
-          {outputFormat === 'pptx' ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}">
-          <input type="radio" name="format" value="pptx" bind:group={outputFormat} class="accent-blue-600" />
-          <span class="text-sm">.pptx (PowerPoint)</span>
+        <label class="flex items-center gap-2 px-3 py-1.5 border text-xs cursor-pointer transition-colors
+          {outputFormat === 'pptx' ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-300'}">
+          <input type="radio" name="format" value="pptx" bind:group={outputFormat} class="accent-gray-900" />
+          <span>.pptx (PowerPoint)</span>
         </label>
-        <label class="flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer transition-colors opacity-50
-          {outputFormat === 'pdf' ? 'border-blue-400 bg-blue-50' : 'border-gray-200'}">
-          <input type="radio" name="format" value="pdf" bind:group={outputFormat} class="accent-blue-600" disabled />
-          <span class="text-sm">.pdf (Coming soon)</span>
+        <label class="flex items-center gap-2 px-3 py-1.5 border text-xs cursor-pointer transition-colors opacity-40
+          {outputFormat === 'pdf' ? 'border-gray-900 bg-gray-50' : 'border-gray-200'}">
+          <input type="radio" name="format" value="pdf" bind:group={outputFormat} class="accent-gray-900" disabled />
+          <span>.pdf (Coming soon)</span>
         </label>
       </div>
     </div>
 
     <div class="flex items-center justify-between">
       <button
-        class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+        class="t-btn-text"
         onclick={() => { step = 'preview'; }}
       >
-        ← Back to preview
+        &larr; Back to preview
       </button>
       <button
-        class="px-6 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors
-          {!selectedTemplate ? 'opacity-50 cursor-not-allowed' : ''}"
+        class="t-btn {!selectedTemplate ? 'opacity-40 cursor-not-allowed' : ''}"
         onclick={handleGenerate}
         disabled={!selectedTemplate}
       >
@@ -188,21 +180,19 @@
 
   <!-- Generating step -->
   {#if step === 'generating'}
-    <div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
-      <div class="animate-spin text-4xl mb-4">🎨</div>
-      <p class="text-lg font-medium text-gray-700">Generating your presentation...</p>
-      <p class="text-sm text-gray-500 mt-2">Building slides with your selected template</p>
+    <div class="t-card p-8 text-center">
+      <p class="text-sm font-mono text-gray-700">Generating presentation<span class="animate-blink">...</span></p>
+      <p class="text-xs text-gray-400 mt-2">Building slides with the selected template</p>
     </div>
   {/if}
 
   <!-- Done step -->
   {#if step === 'done'}
-    <div class="bg-white rounded-xl border border-green-200 p-12 text-center">
-      <div class="text-5xl mb-4">✅</div>
-      <p class="text-lg font-medium text-gray-800">Presentation downloaded!</p>
-      <p class="text-sm text-gray-500 mt-2 mb-6">Check your downloads folder for the .pptx file</p>
+    <div class="t-card p-8 text-center">
+      <p class="text-sm font-mono text-gray-800">[done] Presentation downloaded.</p>
+      <p class="text-xs text-gray-400 mt-2">Check your downloads folder for the .pptx file</p>
       <button
-        class="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+        class="t-btn mt-4"
         onclick={handleReset}
       >
         Create another presentation

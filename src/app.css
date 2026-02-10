@@ -1,1 +1,63 @@
 @import 'tailwindcss';
+
+@layer components {
+  .t-card {
+    background-color: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+  }
+
+  .t-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--color-gray-300);
+    background-color: var(--color-white);
+    color: var(--color-gray-900);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background-color 0.15s;
+  }
+
+  .t-btn:hover {
+    background-color: var(--color-gray-50);
+  }
+
+  .t-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .t-btn-text {
+    padding: 0.5rem 1rem;
+    color: var(--color-gray-500);
+    font-size: 0.875rem;
+    cursor: pointer;
+    background: none;
+    border: none;
+    transition: color 0.15s;
+  }
+
+  .t-btn-text:hover {
+    color: var(--color-gray-900);
+    text-decoration: underline;
+  }
+
+  .t-code {
+    font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+    font-size: 0.75rem;
+    background-color: var(--color-gray-50);
+    border: 1px solid var(--color-gray-200);
+    padding: 0.75rem 1rem;
+    white-space: pre;
+    overflow-x: auto;
+    line-height: 1.6;
+    color: var(--color-gray-700);
+  }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.animate-blink {
+  animation: blink 1.2s infinite;
+}
