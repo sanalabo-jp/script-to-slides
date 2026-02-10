@@ -1,103 +1,106 @@
 import PptxGenJS from 'pptxgenjs';
-import type { ParseResult, GeminiAnalysisResult, ScriptLine, SlideAnalysis } from '$lib/types';
-import { themeToSlideConfig } from './themeEngine';
-import { visualToShapeConfig, getBackgroundConfig } from './visualMapper';
+import type { ParseResult, SlideData, SlideTemplate, ElementStyle } from '$lib/types';
+
+/** Strip leading '#' from hex color for pptxgenjs */
+function stripHash(color: string): string {
+  return color.replace(/^#/, '');
+}
+
+/** Convert ElementStyle fontWeight to pptxgenjs bold boolean */
+function isBold(style: ElementStyle): boolean {
+  return style.fontWeight >= 700;
+}
 
 export async function generatePptx(
-  parsedScript: ParseResult,
-  analysis: GeminiAnalysisResult
+  parseResult: ParseResult,
+  template: SlideTemplate
 ): Promise<Uint8Array> {
   const pptx = new PptxGenJS();
 
-  pptx.layout = 'LAYOUT_WIDE'; // 16:9
+  pptx.layout = 'LAYOUT_WIDE'; // 13.33" × 7.5"
   pptx.author = 'Script-to-Slides';
-  pptx.subject = 'Auto-generated presentation from script';
+  pptx.subject = parseResult.frontMatter.topic || 'Auto-generated presentation';
 
-  // ===== Title Slide =====
-  addTitleSlide(pptx, parsedScript, analysis);
+  // ===== Cover Slide =====
+  addCoverSlide(pptx, parseResult, template);
 
-  // ===== Content Slides (1 line = 1 slide) =====
-  for (const line of parsedScript.lines) {
-    const slideAnalysis = analysis.slides.find((s) => s.lineNumber === line.lineNumber);
-    // Theme lookup: try speaker name first, then role, then speaker[role] combined key
-    const theme =
-      analysis.themes[line.speaker] ||
-      analysis.themes[line.role] ||
-      analysis.themes[`${line.speaker}[${line.role}]`] ||
-      Object.values(analysis.themes)[0]; // ultimate fallback: first theme
-
-    if (!theme) continue;
-
-    addContentSlide(pptx, line, slideAnalysis, theme, analysis);
+  // ===== Content Slides (1 slide per dialogue line) =====
+  for (const slide of parseResult.slides) {
+    addContentSlide(pptx, slide, template);
   }
 
   // ===== Ending Slide =====
-  addEndingSlide(pptx, parsedScript);
+  addEndingSlide(pptx, parseResult, template);
 
-  // Generate as arraybuffer
   const output = await pptx.write({ outputType: 'arraybuffer' });
   return new Uint8Array(output as ArrayBuffer);
 }
 
-function addTitleSlide(
+function addCoverSlide(
   pptx: PptxGenJS,
-  parsedScript: ParseResult,
-  analysis: GeminiAnalysisResult
+  parseResult: ParseResult,
+  template: SlideTemplate
 ): void {
   const slide = pptx.addSlide();
+  const bg = stripHash(template.background.color);
+  slide.background = { color: bg } as PptxGenJS.BackgroundProps;
 
-  // Use the first speaker/role's theme for the title slide
-  const firstSpeaker = parsedScript.metadata.speakers[0];
-  const firstRole = parsedScript.metadata.roles[0];
-  const theme =
-    analysis.themes[firstSpeaker] ||
-    analysis.themes[firstRole] ||
-    Object.values(analysis.themes)[0];
-  const config = theme ? themeToSlideConfig(theme) : null;
+  const { styles } = template;
 
-  if (config) {
-    slide.background = config.background as PptxGenJS.BackgroundProps;
-  } else {
-    slide.background = { color: '1A1A2E' };
-  }
-
-  // Title
-  slide.addText('Script to Slides', {
-    x: 0.5,
-    y: 1.0,
-    w: 9.0,
-    h: 1.5,
-    fontSize: 36,
-    fontFace: config?.titleStyle.fontFace || 'Arial',
-    color: config?.titleStyle.color || 'FFFFFF',
+  // Topic as title
+  const topic = parseResult.frontMatter.topic || 'Presentation';
+  slide.addText(topic, {
+    x: 0.8,
+    y: 1.8,
+    w: 11.7,
+    h: 1.2,
+    fontSize: styles.titleLabel.fontSize * 2.5,
+    fontFace: styles.titleLabel.fontFamily,
+    color: stripHash(styles.titleLabel.fontColor),
     bold: true,
     align: 'center',
   });
 
-  // Metadata
-  const speakerList = parsedScript.metadata.speakers
-    .map((s, i) => `${s} (${parsedScript.metadata.roles[i] || 'unknown'})`)
-    .join('  |  ');
+  // Categories
+  const categories = parseResult.frontMatter.categories;
+  if (categories.length > 0) {
+    slide.addText(categories.join(' · '), {
+      x: 0.8,
+      y: 3.2,
+      w: 11.7,
+      h: 0.5,
+      fontSize: styles.callout1Label.fontSize,
+      fontFace: styles.callout1Label.fontFamily,
+      color: stripHash(styles.callout1Label.fontColor),
+      align: 'center',
+    });
+  }
+
+  // Speaker list
+  const speakerList = parseResult.metadata.speakers
+    .map((s) => `${s.name} [${s.role}]`)
+    .join(', ');
 
   slide.addText(speakerList, {
-    x: 0.5,
-    y: 2.8,
-    w: 9.0,
-    h: 0.8,
-    fontSize: 16,
-    fontFace: config?.bodyStyle.fontFace || 'Arial',
-    color: config?.captionStyle.color || 'AAAAAA',
+    x: 0.8,
+    y: 4.2,
+    w: 11.7,
+    h: 0.6,
+    fontSize: styles.bodyLabel.fontSize,
+    fontFace: styles.bodyLabel.fontFamily,
+    color: stripHash(styles.callout2Label.fontColor),
     align: 'center',
   });
 
-  slide.addText(`${parsedScript.metadata.totalLines} slides`, {
-    x: 0.5,
-    y: 3.8,
-    w: 9.0,
-    h: 0.5,
-    fontSize: 14,
-    fontFace: 'Arial',
-    color: config?.captionStyle.color || '888888',
+  // Slide count
+  slide.addText(`${parseResult.slides.length} slides`, {
+    x: 0.8,
+    y: 5.2,
+    w: 11.7,
+    h: 0.4,
+    fontSize: styles.captionLabel.fontSize,
+    fontFace: styles.captionLabel.fontFamily,
+    color: stripHash(styles.captionLabel.fontColor),
     align: 'center',
     italic: true,
   });
@@ -105,180 +108,146 @@ function addTitleSlide(
 
 function addContentSlide(
   pptx: PptxGenJS,
-  line: ScriptLine,
-  slideAnalysis: SlideAnalysis | undefined,
-  roleTheme: GeminiAnalysisResult['themes'][string],
-  _analysis: GeminiAnalysisResult
+  data: SlideData,
+  template: SlideTemplate
 ): void {
   const slide = pptx.addSlide();
-  const config = themeToSlideConfig(roleTheme);
+  const bg = stripHash(template.background.color);
+  slide.background = { color: bg } as PptxGenJS.BackgroundProps;
 
-  // Background
-  if (slideAnalysis?.visual) {
-    const bgConfig = getBackgroundConfig(slideAnalysis.visual, roleTheme.backgroundColor);
-    slide.background = bgConfig as PptxGenJS.BackgroundProps;
-  } else {
-    slide.background = config.background as PptxGenJS.BackgroundProps;
-  }
+  const { styles } = template;
 
-  // Visual shape element (from description)
-  if (slideAnalysis?.visual) {
-    const shapeConfig = visualToShapeConfig(slideAnalysis.visual);
-    if (shapeConfig) {
-      slide.addShape(shapeConfig.shapeName as PptxGenJS.ShapeType, {
-        x: shapeConfig.x,
-        y: shapeConfig.y,
-        w: shapeConfig.w,
-        h: shapeConfig.h,
-        fill: shapeConfig.fill,
-      });
-    }
-  }
-
-  // Header: Speaker + Role + Emoji
-  const emoji = slideAnalysis?.visual?.emoji || '';
-  const headerText = `${emoji} ${line.speaker} · ${line.role}`.trim();
-
-  slide.addText(headerText, {
-    x: 0.5,
-    y: 0.2,
-    w: 9.0,
-    h: 0.6,
-    fontSize: config.captionStyle.fontSize + 2,
-    fontFace: config.titleStyle.fontFace,
-    color: config.accentColor,
-    bold: true,
+  // --- callout1Label: speaker info ---
+  const speakerText = `${data.speaker.name} [${data.speaker.role}]`;
+  slide.addText(speakerText, {
+    x: 0.8,
+    y: 0.4,
+    w: 11.7,
+    h: 0.4,
+    fontSize: styles.callout1Label.fontSize,
+    fontFace: styles.callout1Label.fontFamily,
+    color: stripHash(styles.callout1Label.fontColor),
+    bold: isBold(styles.callout1Label),
   });
 
-  // Description badge (if exists)
-  if (line.description) {
-    slide.addShape('roundRect' as PptxGenJS.ShapeType, {
-      x: 0.5,
-      y: 0.85,
-      w: Math.min(line.description!.length * 0.15 + 1.0, 6.0),
-      h: 0.4,
-      fill: { color: config.accentColor },
-      rectRadius: 0.1,
-    });
+  // --- callout2Label: metadata (· separated) ---
+  const metadataEntries = Object.entries(data.metadata);
+  let nextY = 0.85;
 
-    slide.addText(`( ${line.description} )`, {
-      x: 0.5,
-      y: 0.85,
-      w: 4.0,
-      h: 0.4,
-      fontSize: 11,
-      fontFace: config.bodyStyle.fontFace,
-      color: 'FFFFFF',
-      italic: true,
+  if (metadataEntries.length > 0) {
+    const metadataText = metadataEntries.map(([k, v]) => `${k}: ${v}`).join(' · ');
+    slide.addText(metadataText, {
+      x: 0.8,
+      y: nextY,
+      w: 11.7,
+      h: 0.35,
+      fontSize: styles.callout2Label.fontSize,
+      fontFace: styles.callout2Label.fontFamily,
+      color: stripHash(styles.callout2Label.fontColor),
+      bold: isBold(styles.callout2Label),
     });
+    nextY += 0.45;
   }
 
-  // Main dialogue content
-  const dialogueY = line.description ? 1.5 : 1.2;
-  const dialogueH = slideAnalysis?.supplementary ? 2.5 : 3.3;
+  // --- titleLabel: visual hint (if present) ---
+  if (data.visualHint) {
+    slide.addText(`( ${data.visualHint} )`, {
+      x: 0.8,
+      y: nextY,
+      w: 11.7,
+      h: 0.5,
+      fontSize: styles.titleLabel.fontSize,
+      fontFace: styles.titleLabel.fontFamily,
+      color: stripHash(styles.titleLabel.fontColor),
+      bold: isBold(styles.titleLabel),
+      italic: true,
+    });
+    nextY += 0.6;
+  }
 
-  slide.addText(line.dialogue, {
+  // --- bodyLabel: context (dialogue) ---
+  const bodyTop = Math.max(nextY + 0.2, 1.6);
+  const bodyHeight = 6.8 - bodyTop - 0.8; // leave room for caption
+
+  slide.addText(data.context, {
     x: 0.8,
-    y: dialogueY,
-    w: 8.4,
-    h: dialogueH,
-    fontSize: config.bodyStyle.fontSize,
-    fontFace: config.bodyStyle.fontFace,
-    color: config.bodyStyle.color,
+    y: bodyTop,
+    w: 11.7,
+    h: bodyHeight,
+    fontSize: styles.bodyLabel.fontSize,
+    fontFace: styles.bodyLabel.fontFamily,
+    color: stripHash(styles.bodyLabel.fontColor),
+    bold: isBold(styles.bodyLabel),
     align: 'left',
-    valign: 'middle',
+    valign: 'top',
     wrap: true,
     lineSpacing: 28,
   });
 
-  // Supplementary explanation (AI-generated, optional)
-  if (slideAnalysis?.supplementary?.text) {
-    // Divider line
-    slide.addShape('line' as PptxGenJS.ShapeType, {
-      x: 0.5,
-      y: 4.2,
-      w: 9.0,
-      h: 0,
-      line: { color: config.accentColor, width: 0.5 },
-    });
-
-    const supMainText = String(slideAnalysis.supplementary.text || '');
-    const keywords = Array.isArray(slideAnalysis.supplementary.keywords)
-      ? slideAnalysis.supplementary.keywords.map(String)
-      : [];
-    const supText = keywords.length
-      ? `${supMainText}\n[${keywords.join(', ')}]`
-      : supMainText;
-
-    slide.addText(supText, {
-      x: 0.8,
-      y: 4.35,
-      w: 8.4,
-      h: 1.0,
-      fontSize: config.captionStyle.fontSize,
-      fontFace: config.captionStyle.fontFace,
-      color: config.captionStyle.color,
-      italic: config.captionStyle.italic,
-      wrap: true,
-      valign: 'top',
-    });
-  }
-
-  // Slide number
-  slide.addText(`${line.lineNumber}`, {
-    x: 9.0,
-    y: 5.1,
-    w: 0.8,
+  // --- captionLabel: slide number ---
+  slide.addText(`${data.lineNumber}`, {
+    x: 0.8,
+    y: 6.8,
+    w: 11.7,
     h: 0.4,
-    fontSize: 10,
-    fontFace: 'Arial',
-    color: config.captionStyle.color,
+    fontSize: styles.captionLabel.fontSize,
+    fontFace: styles.captionLabel.fontFamily,
+    color: stripHash(styles.captionLabel.fontColor),
     align: 'right',
   });
 }
 
-function addEndingSlide(pptx: PptxGenJS, parsedScript: ParseResult): void {
+function addEndingSlide(
+  pptx: PptxGenJS,
+  parseResult: ParseResult,
+  template: SlideTemplate
+): void {
   const slide = pptx.addSlide();
+  const bg = stripHash(template.background.color);
+  slide.background = { color: bg } as PptxGenJS.BackgroundProps;
 
-  slide.background = { color: '1A1A2E' };
+  const { styles } = template;
 
   slide.addText('End of Presentation', {
-    x: 0.5,
-    y: 1.5,
-    w: 9.0,
+    x: 0.8,
+    y: 2.0,
+    w: 11.7,
     h: 1.0,
-    fontSize: 32,
-    fontFace: 'Arial',
-    color: 'FFFFFF',
+    fontSize: styles.titleLabel.fontSize * 2,
+    fontFace: styles.titleLabel.fontFamily,
+    color: stripHash(styles.titleLabel.fontColor),
     bold: true,
     align: 'center',
   });
 
-  const credits = parsedScript.metadata.speakers
-    .map((s) => `  ${s}`)
+  const credits = parseResult.metadata.speakers
+    .map((s) => `${s.name} [${s.role}]`)
     .join('\n');
 
   slide.addText(`Speakers:\n${credits}`, {
-    x: 0.5,
-    y: 3.0,
-    w: 9.0,
+    x: 0.8,
+    y: 3.5,
+    w: 11.7,
     h: 1.5,
-    fontSize: 16,
-    fontFace: 'Arial',
-    color: 'AAAAAA',
+    fontSize: styles.bodyLabel.fontSize,
+    fontFace: styles.bodyLabel.fontFamily,
+    color: stripHash(styles.callout1Label.fontColor),
     align: 'center',
     lineSpacing: 24,
   });
 
-  slide.addText(`Total: ${parsedScript.lines.length} slides | Generated by Script-to-Slides`, {
-    x: 0.5,
-    y: 4.8,
-    w: 9.0,
-    h: 0.5,
-    fontSize: 11,
-    fontFace: 'Arial',
-    color: '666666',
-    align: 'center',
-    italic: true,
-  });
+  slide.addText(
+    `Total: ${parseResult.slides.length} slides | Generated by Script-to-Slides`,
+    {
+      x: 0.8,
+      y: 5.5,
+      w: 11.7,
+      h: 0.4,
+      fontSize: styles.captionLabel.fontSize,
+      fontFace: styles.captionLabel.fontFamily,
+      color: stripHash(styles.captionLabel.fontColor),
+      align: 'center',
+      italic: true,
+    }
+  );
 }

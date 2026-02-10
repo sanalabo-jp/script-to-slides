@@ -1,42 +1,48 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { generatePptx } from '$lib/generator/slideGenerator';
-import type { ParseResult, GeminiAnalysisResult } from '$lib/types';
+import type { ParseResult, SlideTemplate } from '$lib/types';
 
 export const POST: RequestHandler = async ({ request }) => {
   const body = await request.json();
-  const { parsedScript, analysis, format } = body as {
+  const { parsedScript, template, format } = body as {
     parsedScript: ParseResult;
-    analysis: GeminiAnalysisResult;
+    template: SlideTemplate;
     format: 'pptx' | 'pdf';
   };
 
-  if (!parsedScript?.lines?.length || !analysis) {
-    throw error(400, 'Missing parsed script or analysis data');
+  if (!parsedScript?.slides?.length || !template) {
+    throw error(400, 'Missing parsed script or template data');
   }
 
   try {
-    const pptxData = await generatePptx(parsedScript, analysis);
+    const pptxData = await generatePptx(parsedScript, template);
+    const responseBody = pptxData.buffer as ArrayBuffer;
 
     if (format === 'pdf') {
       // PDF conversion: future implementation
-      // For now, return pptx with a note
-      return new Response(pptxData, {
+      // For now, return pptx
+      return new Response(responseBody, {
         headers: {
-          'Content-Type': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          'Content-Type':
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
           'Content-Disposition': 'attachment; filename="presentation.pptx"',
         },
       });
     }
 
-    return new Response(pptxData, {
+    return new Response(responseBody, {
       headers: {
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'Content-Type':
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
         'Content-Disposition': 'attachment; filename="presentation.pptx"',
       },
     });
   } catch (err) {
     console.error('PPTX generation failed:', err);
-    throw error(500, `Failed to generate presentation: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    throw error(
+      500,
+      `Failed to generate presentation: ${err instanceof Error ? err.message : 'Unknown error'}`
+    );
   }
 };
