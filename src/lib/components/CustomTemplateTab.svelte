@@ -20,6 +20,7 @@
 	let isDragging = $state(false);
 	let isLoading = $state(false);
 	let errorMsg = $state('');
+	let extractWarnings: string[] = $state([]);
 	let extractedTemplate: SlideTemplate | null = $state(null);
 
 	// --- Editor state ---
@@ -40,6 +41,7 @@
 
 	async function handleFile(file: File) {
 		errorMsg = '';
+		extractWarnings = [];
 		extractedTemplate = null;
 		closeEditor();
 
@@ -50,7 +52,14 @@
 
 		isLoading = true;
 		try {
-			extractedTemplate = await parsePptxTemplate(file);
+			const result = await parsePptxTemplate(file);
+			extractedTemplate = result.template;
+			extractWarnings = result.warnings;
+
+			if (result.isPartial) {
+				// Partial extraction → open editor automatically
+				openEditor('extract-edit', result.template);
+			}
 		} catch (e) {
 			errorMsg = `Style extraction failed: ${e instanceof Error ? e.message : String(e)}`;
 		} finally {

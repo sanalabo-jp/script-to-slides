@@ -42,6 +42,12 @@ export interface ExtractedStyles {
 	placeholders: PlaceholderStyle[];
 }
 
+export interface PptxParseResult {
+	template: SlideTemplate;
+	warnings: string[];
+	isPartial: boolean;
+}
+
 // === Pure Functions ===
 
 /**

@@ -4,6 +4,7 @@ import {
 	type ThemeData,
 	type PlaceholderStyle,
 	type ExtractedStyles,
+	type PptxParseResult,
 	SCHEME_CLR_MAP,
 	DEFAULT_FONT,
 	resolveFont,
@@ -13,18 +14,51 @@ import {
 
 // === Public API ===
 
-export async function parsePptxTemplate(file: File): Promise<SlideTemplate> {
+export async function parsePptxTemplate(file: File): Promise<PptxParseResult> {
 	const arrayBuffer = await file.arrayBuffer();
-	const zip = await JSZip.loadAsync(arrayBuffer);
+	const zip = await JSZip.loadAsync(arrayBuffer); // JSZip failure → throw
 
-	const theme = await parseTheme(zip);
-	const masterStyles = await parseSlideMaster(zip, theme);
-	const layoutStyles = await parseSlideLayouts(zip, theme);
+	const warnings: string[] = [];
+	let isPartial = false;
+
+	// Theme: graceful — missing theme uses defaults
+	let theme: ThemeData;
+	try {
+		theme = await parseTheme(zip);
+		if (Object.keys(theme.colorScheme).length === 0) {
+			warnings.push('Theme color scheme not found, using defaults');
+			isPartial = true;
+		}
+	} catch {
+		theme = { colorScheme: {}, majorFont: DEFAULT_FONT, minorFont: DEFAULT_FONT };
+		warnings.push('Failed to parse theme, using defaults');
+		isPartial = true;
+	}
+
+	// Master: graceful
+	let masterStyles: ExtractedStyles;
+	try {
+		masterStyles = await parseSlideMaster(zip, theme);
+	} catch {
+		masterStyles = { background: null, placeholders: [] };
+		warnings.push('Failed to parse slide master');
+		isPartial = true;
+	}
+
+	// Layouts: graceful — individual layout failures are skipped
+	let layoutStyles: ExtractedStyles;
+	try {
+		layoutStyles = await parseSlideLayouts(zip, theme);
+	} catch {
+		layoutStyles = { background: null, placeholders: [] };
+		warnings.push('Failed to parse slide layouts');
+		isPartial = true;
+	}
 
 	const merged = mergeStyles(masterStyles, layoutStyles);
 	const template = buildTemplate(file.name, merged, theme);
 
-	return template;
+	return { template, warnings, isPartial };
 }
 
 // === Theme Parsing ===
