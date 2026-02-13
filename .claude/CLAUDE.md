@@ -55,9 +55,13 @@ src/
 │   │   ├── themeEngine.ts        # AI 테마 → pptxgenjs config (safeColor 포함)
 │   │   └── visualMapper.ts       # AI 시각요소 → pptxgenjs shapes (safeColor 포함)
 │   ├── parser/
-│   │   └── scriptParser.ts       # 대본 텍스트 파싱 (name[role]: (desc) dialogue)
+│   │   ├── scriptParser.ts       # 대본 텍스트 파싱 (name[role]: (desc) dialogue)
+│   │   ├── pptxTemplateParser.ts # .pptx → SlideTemplate 추출 (JSZip + DOMParser)
+│   │   └── pptxTemplateUtils.ts  # 파서 순수 함수 + 타입 (lightenColor, mergeStyles, buildTemplate 등)
+│   ├── templates/
+│   │   └── templateUtils.ts      # 템플릿 유틸 (deriveCallout2, createBlankCustomTemplate, FONT_FAMILY_PRESETS)
 │   ├── types/
-│   │   └── index.ts              # 타입 정의 (ScriptLine, ChatMessage, SpeakerProfile 등)
+│   │   └── index.ts              # 타입 정의 (ScriptLine, ChatMessage, SpeakerProfile, SlideTemplate 등)
 │   ├── utils/
 │   │   ├── colorUtils.ts         # 화자 시그니처 컬러 생성 (HSL 기반)
 │   │   └── chatTransform.ts      # ChatMessage[] → ParseResult 변환
@@ -68,8 +72,13 @@ src/
 │       ├── FrontMatterForm.svelte # 프론트매터 설정 (type, topic, categories)
 │       ├── ChatInputArea.svelte  # 대사 입력 폼 + 화자 선택
 │       ├── ChatCell.svelte       # 메시지 셀 (편집/삭제, 좌우 정렬)
-│       ├── SpeakerSelector.svelte # 화자 드롭다운 (추가/제거/선택)
-│       └── MetadataModal.svelte  # 행 메타데이터 key-value 편집 모달
+│       ├── SpeakerSelector.svelte  # 화자 드롭다운 (추가/제거/선택)
+│       ├── MetadataModal.svelte   # 행 메타데이터 key-value 편집 모달
+│       ├── TemplateSelector.svelte # 프리셋/커스텀 탭 전환 + 프리셋 목록
+│       ├── CustomTemplateTab.svelte # .pptx 추출 + 빈 템플릿 생성 + 에디터 통합
+│       ├── TemplatePreviewCard.svelte # 재사용 4:3 미리보기 카드
+│       ├── TemplateEditor.svelte  # 인라인 폼 (폰트/색상/굵기 + callout2 자동파생)
+│       └── TemplateTooltip.svelte # hover 시 floating 상세 미리보기
 ├── routes/
 │   ├── +page.svelte              # 메인 페이지 (4단계 UI, File/Manual 탭 토글)
 │   ├── +layout.svelte            # 레이아웃
@@ -140,8 +149,8 @@ src/
 
 ### 기능 1: 슬라이드쇼 템플릿 지정 옵션
 - Phase 1 완료: 렌더러 비종속 추상 템플릿 프로토콜 + 기본 프리셋 3종
-- Phase 2: .pptx 업로드 → 파서로 스타일 추출 → 프로토콜 변환
-- Phase 3: 커스텀 템플릿 빌더
+- Phase 2 완료: .pptx 업로드 → JSZip+OpenXML 파서로 스타일 추출 → SlideTemplate 변환 (graceful degradation)
+- Phase 3 완료: 커스텀 템플릿 빌더 (TemplateEditor 인라인 폼 + callout2 자동파생 + 실시간 미리보기)
 - Phase 4: AI 기반 템플릿 추천 (기능5 이후)
 
 ### 기능 2: 슬라이드 컨텐츠 배치 방식 재정의
