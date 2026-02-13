@@ -28,6 +28,9 @@ Thumbs.db
 *.log
 npm-debug.log*
 
+# Sample / test assets
+sample/
+
 # Coverage
 coverage/
 
