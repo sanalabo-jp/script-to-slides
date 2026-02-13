@@ -251,6 +251,17 @@
 					</button>
 				</div>
 
+				<!-- Warnings from partial extraction -->
+				{#if extractWarnings.length > 0 && editorMode === 'extract-edit'}
+					<div class="border-l-2 border-yellow-400 bg-yellow-50 px-3 py-2 space-y-1">
+						<p class="text-[10px] text-yellow-700 font-semibold uppercase">Partial extraction</p>
+						{#each extractWarnings as warning}
+							<p class="text-[10px] text-yellow-600">- {warning}</p>
+						{/each}
+						<p class="text-[10px] text-yellow-600">Review and adjust the values below.</p>
+					</div>
+				{/if}
+
 				<div class="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-4">
 					<!-- Preview card (live) -->
 					{#if previewTemplate}
