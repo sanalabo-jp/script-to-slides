@@ -3,11 +3,13 @@
 	import ManualInputMode from '$lib/components/ManualInputMode.svelte';
 	import ScriptPreview from '$lib/components/ScriptPreview.svelte';
 	import TemplateSelector from '$lib/components/TemplateSelector.svelte';
+	import CustomTemplateTab from '$lib/components/CustomTemplateTab.svelte';
 	import { parseScript, readFileAsText } from '$lib/parser/scriptParser';
 	import type { AppStep, ParseResult, SlideTemplate } from '$lib/types';
 
 	let step: AppStep = $state('upload');
 	let inputMode: 'file' | 'manual' = $state('file');
+	let templateTab: 'presets' | 'custom' = $state('presets');
 	let fileName = $state('');
 	let parseResult: ParseResult | null = $state(null);
 	let selectedTemplate: SlideTemplate | null = $state(null);
@@ -173,7 +175,33 @@
 
 	<!-- Step 3: Template Selection -->
 	{#if step === 'template'}
-		<TemplateSelector {selectedTemplate} onSelect={handleTemplateSelect} />
+		<!-- Template mode tabs -->
+		<div class="flex gap-0">
+			<button
+				class="input-tab {templateTab === 'presets' ? 'input-tab-active' : ''}"
+				onclick={() => {
+					templateTab = 'presets';
+				}}>Presets</button
+			>
+			<button
+				class="input-tab {templateTab === 'custom' ? 'input-tab-active' : ''}"
+				onclick={() => {
+					templateTab = 'custom';
+				}}>Custom</button
+			>
+		</div>
+
+		{#if templateTab === 'presets'}
+			<TemplateSelector {selectedTemplate} onSelect={handleTemplateSelect} />
+		{:else}
+			<CustomTemplateTab
+				{selectedTemplate}
+				onSelect={handleTemplateSelect}
+				onSwitchToPresets={() => {
+					templateTab = 'presets';
+				}}
+			/>
+		{/if}
 
 		<!-- Format selector -->
 		<div class="t-card p-4">

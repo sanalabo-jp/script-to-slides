@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { SlideTemplate } from '$lib/types';
 	import { templatePresets } from '$lib/templates/presets';
+	import TemplateTooltip from './TemplateTooltip.svelte';
 
 	let {
 		selectedTemplate,
@@ -9,6 +10,26 @@
 		selectedTemplate: SlideTemplate | null;
 		onSelect: (template: SlideTemplate) => void;
 	} = $props();
+
+	let tooltipTemplate: SlideTemplate | null = $state(null);
+	let tooltipVisible = $state(false);
+	let tooltipX = $state(0);
+	let tooltipY = $state(0);
+
+	function handleMouseEnter(template: SlideTemplate) {
+		tooltipTemplate = template;
+		tooltipVisible = true;
+	}
+
+	function handleMouseMove(e: MouseEvent) {
+		tooltipX = e.clientX;
+		tooltipY = e.clientY;
+	}
+
+	function handleMouseLeave() {
+		tooltipVisible = false;
+		tooltipTemplate = null;
+	}
 </script>
 
 <div class="t-card overflow-hidden">
@@ -24,6 +45,9 @@
 				class="group relative border p-3 transition-all text-left
           {isSelected ? 'border-gray-900 border-2' : 'border-gray-200 hover:border-gray-400'}"
 				onclick={() => onSelect(template)}
+				onmouseenter={() => handleMouseEnter(template)}
+				onmousemove={handleMouseMove}
+				onmouseleave={handleMouseLeave}
 			>
 				<!-- Template preview -->
 				<div
@@ -64,3 +88,7 @@
 		{/each}
 	</div>
 </div>
+
+{#if tooltipTemplate}
+	<TemplateTooltip template={tooltipTemplate} visible={tooltipVisible} x={tooltipX} y={tooltipY} />
+{/if}
