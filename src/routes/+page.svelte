@@ -1,266 +1,253 @@
 <script lang="ts">
-  import FileUpload from '$lib/components/FileUpload.svelte';
-  import ScriptPreview from '$lib/components/ScriptPreview.svelte';
-  import { parseScript, readFileAsText } from '$lib/parser/scriptParser';
-  import type { AppStep, ParseResult, GeminiAnalysisResult } from '$lib/types';
+	import FileUpload from '$lib/components/FileUpload.svelte';
+	import ManualInputMode from '$lib/components/ManualInputMode.svelte';
+	import ScriptPreview from '$lib/components/ScriptPreview.svelte';
+	import TemplateSelector from '$lib/components/TemplateSelector.svelte';
+	import { parseScript, readFileAsText } from '$lib/parser/scriptParser';
+	import type { AppStep, ParseResult, SlideTemplate } from '$lib/types';
 
-  let step: AppStep = $state('upload');
-  let fileName = $state('');
-  let parseResult: ParseResult | null = $state(null);
-  let analysis: GeminiAnalysisResult | null = $state(null);
-  let outputFormat: 'pptx' | 'pdf' = $state('pptx');
-  let errorMsg = $state('');
-  let isLoading = $state(false);
+	let step: AppStep = $state('upload');
+	let inputMode: 'file' | 'manual' = $state('file');
+	let fileName = $state('');
+	let parseResult: ParseResult | null = $state(null);
+	let selectedTemplate: SlideTemplate | null = $state(null);
+	let outputFormat: 'pptx' | 'pdf' = $state('pptx');
+	let errorMsg = $state('');
+	let isLoading = $state(false);
 
-  async function handleFileSelected(file: File) {
-    try {
-      fileName = file.name;
-      errorMsg = '';
+	async function handleFileSelected(file: File) {
+		try {
+			fileName = file.name;
+			errorMsg = '';
 
-      const content = await readFileAsText(file);
-      const result = parseScript(content);
-      parseResult = result;
+			const content = await readFileAsText(file);
+			const result = parseScript(content);
+			parseResult = result;
 
-      if (!result.isValid) {
-        errorMsg = 'The file does not appear to be a valid script. Please check the format.';
-        step = 'preview';
-        return;
-      }
+			if (!result.isValid) {
+				errorMsg = 'The file does not appear to be a valid script. Please check the format.';
+				step = 'preview';
+				return;
+			}
 
-      step = 'preview';
-    } catch (err) {
-      errorMsg = `Failed to read file: ${err instanceof Error ? err.message : 'Unknown error'}`;
-      step = 'error';
-    }
-  }
+			step = 'preview';
+		} catch (err) {
+			errorMsg = `Failed to read file: ${err instanceof Error ? err.message : 'Unknown error'}`;
+			step = 'error';
+		}
+	}
 
-  async function handleAnalyze() {
-    if (!parseResult) return;
+	function handleManualComplete(result: ParseResult) {
+		parseResult = result;
+		errorMsg = '';
+		step = 'preview';
+	}
 
-    step = 'analyzing';
-    isLoading = true;
-    errorMsg = '';
+	function handleTemplateSelect(template: SlideTemplate) {
+		selectedTemplate = template;
+	}
 
-    try {
-      const res = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lines: parseResult.lines }),
-      });
+	function handleProceedToTemplate() {
+		step = 'template';
+	}
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({ message: 'Analysis failed' }));
-        throw new Error(errData.message || `HTTP ${res.status}`);
-      }
+	async function handleGenerate() {
+		if (!parseResult || !selectedTemplate) return;
 
-      analysis = await res.json();
-      step = 'ready';
-    } catch (err) {
-      errorMsg = `Analysis failed: ${err instanceof Error ? err.message : 'Unknown error'}`;
-      step = 'preview';
-    } finally {
-      isLoading = false;
-    }
-  }
+		step = 'generating';
+		isLoading = true;
+		errorMsg = '';
 
-  async function handleGenerate() {
-    if (!parseResult || !analysis) return;
+		try {
+			const { generatePptx } = await import('$lib/generator/slideGenerator');
+			const pptxData = await generatePptx(parseResult, selectedTemplate);
 
-    step = 'generating';
-    isLoading = true;
-    errorMsg = '';
+			const blob = new Blob([pptxData.buffer as ArrayBuffer], {
+				type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+			});
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = 'presentation.pptx';
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
 
-    try {
-      // Client-side PPTX generation (avoids Vercel serverless ESM issues)
-      const { generatePptx } = await import('$lib/generator/slideGenerator');
-      const pptxData = await generatePptx(parseResult, analysis);
+			step = 'done';
+		} catch (err) {
+			errorMsg = `Generation failed: ${err instanceof Error ? err.message : 'Unknown error'}`;
+			step = 'template';
+		} finally {
+			isLoading = false;
+		}
+	}
 
-      const blob = new Blob([pptxData], {
-        type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'presentation.pptx';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      step = 'done';
-    } catch (err) {
-      errorMsg = `Generation failed: ${err instanceof Error ? err.message : 'Unknown error'}`;
-      step = 'ready';
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  function handleReset() {
-    step = 'upload';
-    fileName = '';
-    parseResult = null;
-    analysis = null;
-    errorMsg = '';
-    isLoading = false;
-  }
+	function handleReset() {
+		step = 'upload';
+		inputMode = 'file';
+		fileName = '';
+		parseResult = null;
+		selectedTemplate = null;
+		errorMsg = '';
+		isLoading = false;
+	}
 </script>
 
-<div class="space-y-6">
-  <!-- Step indicator -->
-  <div class="flex items-center justify-center gap-2 text-sm">
-    {#each ['Upload', 'Preview', 'Analyze', 'Generate'] as label, i}
-      {@const stepIndex = ['upload', 'preview', 'analyzing', 'ready', 'generating', 'done'].indexOf(step)}
-      {@const isActive = i <= Math.min(stepIndex, 3)}
-      <div class="flex items-center gap-2">
-        <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium
-          {isActive ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}">
-          {i + 1}
-        </div>
-        <span class="{isActive ? 'text-gray-800 font-medium' : 'text-gray-400'}">{label}</span>
-      </div>
-      {#if i < 3}
-        <div class="w-8 h-px {isActive ? 'bg-blue-300' : 'bg-gray-200'}"></div>
-      {/if}
-    {/each}
-  </div>
+<div class="space-y-4">
+	<!-- Step indicator -->
+	<div class="flex items-center gap-1.5 text-xs">
+		{#each ['Upload', 'Preview', 'Template', 'Generate'] as label, i}
+			{@const stepMap = {
+				upload: 0,
+				preview: 1,
+				template: 2,
+				analyzing: 3,
+				ready: 3,
+				generating: 3,
+				done: 3,
+				error: 0
+			}}
+			{@const currentIndex = stepMap[step] ?? 0}
+			{@const isActive = i <= currentIndex}
+			<span class={isActive ? 'text-gray-900 font-semibold' : 'text-gray-400'}
+				>[{i + 1}] {label}</span
+			>
+			{#if i < 3}
+				<span class="text-gray-300">&mdash;</span>
+			{/if}
+		{/each}
+	</div>
 
-  <!-- Error banner -->
-  {#if errorMsg}
-    <div class="bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex items-start gap-3">
-      <span class="text-red-500 mt-0.5">⚠️</span>
-      <div>
-        <p class="text-sm text-red-700">{errorMsg}</p>
-      </div>
-    </div>
-  {/if}
+	<!-- Error banner -->
+	{#if errorMsg}
+		<div class="border-l-2 border-red-400 bg-white px-4 py-3">
+			<p class="text-xs text-red-700"><span class="text-red-500">[error]</span> {errorMsg}</p>
+		</div>
+	{/if}
 
-  <!-- Upload step -->
-  {#if step === 'upload'}
-    <FileUpload onFileSelected={handleFileSelected} />
-  {/if}
+	<!-- Step 1: Upload -->
+	{#if step === 'upload'}
+		<!-- Input mode tabs -->
+		<div class="flex gap-0">
+			<button
+				class="input-tab {inputMode === 'file' ? 'input-tab-active' : ''}"
+				onclick={() => {
+					inputMode = 'file';
+				}}>File</button
+			>
+			<button
+				class="input-tab {inputMode === 'manual' ? 'input-tab-active' : ''}"
+				onclick={() => {
+					inputMode = 'manual';
+				}}>Manual</button
+			>
+		</div>
 
-  <!-- Preview step -->
-  {#if step === 'preview' && parseResult}
-    <ScriptPreview {parseResult} />
+		{#if inputMode === 'file'}
+			<FileUpload onFileSelected={handleFileSelected} />
+		{:else}
+			<ManualInputMode onComplete={handleManualComplete} />
+		{/if}
+	{/if}
 
-    {#if parseResult.isValid}
-      <div class="flex items-center justify-between">
-        <button
-          class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
-          onclick={handleReset}
-        >
-          ← Upload another file
-        </button>
-        <button
-          class="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-          onclick={handleAnalyze}
-        >
-          Analyze with AI →
-        </button>
-      </div>
-    {:else}
-      <button
-        class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
-        onclick={handleReset}
-      >
-        ← Upload another file
-      </button>
-    {/if}
-  {/if}
+	<!-- Step 2: Preview -->
+	{#if step === 'preview' && parseResult}
+		<ScriptPreview {parseResult} />
 
-  <!-- Analyzing step -->
-  {#if step === 'analyzing'}
-    <div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
-      <div class="animate-spin text-4xl mb-4">⚙️</div>
-      <p class="text-lg font-medium text-gray-700">Analyzing your script with AI...</p>
-      <p class="text-sm text-gray-500 mt-2">Generating themes, visuals, and supplementary content</p>
-    </div>
-  {/if}
+		{#if parseResult.isValid}
+			<div class="flex items-center justify-between">
+				<button class="t-btn-text" onclick={handleReset}
+					>[<span class="t-btn-label">&larr; re-upload</span>]</button
+				>
+				<button class="t-btn" onclick={handleProceedToTemplate}
+					>[<span class="underline">select template &rarr;</span>]</button
+				>
+			</div>
+		{:else}
+			<button class="t-btn-text" onclick={handleReset}
+				>[<span class="t-btn-label">&larr; re-upload</span>]</button
+			>
+		{/if}
+	{/if}
 
-  <!-- Ready step -->
-  {#if step === 'ready' && analysis && parseResult}
-    <div class="bg-white rounded-xl border border-gray-200 p-6">
-      <h2 class="font-semibold text-gray-800 mb-4">Analysis Complete</h2>
+	<!-- Step 3: Template Selection -->
+	{#if step === 'template'}
+		<TemplateSelector {selectedTemplate} onSelect={handleTemplateSelect} />
 
-      <!-- Theme preview -->
-      <div class="mb-6">
-        <p class="text-sm font-medium text-gray-600 mb-2">Themes by Role</p>
-        <div class="flex flex-wrap gap-3">
-          {#each Object.entries(analysis.themes) as [role, theme]}
-            <div
-              class="px-4 py-3 rounded-lg border"
-              style="background-color: {theme.backgroundColor}; border-color: {theme.accentColor}"
-            >
-              <span style="color: {theme.primaryColor}" class="font-medium text-sm">{role}</span>
-              <span style="color: {theme.accentColor}" class="text-xs ml-2">({theme.mood})</span>
-            </div>
-          {/each}
-        </div>
-      </div>
+		<!-- Format selector -->
+		<div class="t-card p-4">
+			<h3 class="text-base font-semibold text-gray-800 mb-3">Output Format</h3>
+			<div class="flex gap-3">
+				<label
+					class="flex items-center gap-2 px-3 py-1.5 border text-xs cursor-pointer transition-colors
+          {outputFormat === 'pptx'
+						? 'border-gray-900 bg-gray-50'
+						: 'border-gray-200 hover:border-gray-300'}"
+				>
+					<input
+						type="radio"
+						name="format"
+						value="pptx"
+						bind:group={outputFormat}
+						class="accent-gray-900"
+					/>
+					<span>.pptx (PowerPoint)</span>
+				</label>
+				<label
+					class="flex items-center gap-2 px-3 py-1.5 border text-xs cursor-pointer transition-colors opacity-40
+          {outputFormat === 'pdf' ? 'border-gray-900 bg-gray-50' : 'border-gray-200'}"
+				>
+					<input
+						type="radio"
+						name="format"
+						value="pdf"
+						bind:group={outputFormat}
+						class="accent-gray-900"
+						disabled
+					/>
+					<span>.pdf (Coming soon)</span>
+				</label>
+			</div>
+		</div>
 
-      <!-- Slide count -->
-      <p class="text-sm text-gray-500 mb-6">
-        {analysis.slides.length} slides will be generated
-        · {analysis.slides.filter((s) => s.supplementary).length} with supplementary content
-      </p>
+		<div class="flex items-center justify-between">
+			<button
+				class="t-btn-text"
+				onclick={() => {
+					step = 'preview';
+				}}
+			>
+				[<span class="t-btn-label">&larr; back to preview</span>]
+			</button>
+			<button
+				class="t-btn {!selectedTemplate ? 'opacity-40 cursor-not-allowed' : ''}"
+				onclick={handleGenerate}
+				disabled={!selectedTemplate}
+			>
+				[<span class="underline">generate presentation</span>]
+			</button>
+		</div>
+	{/if}
 
-      <!-- Format selector -->
-      <div class="mb-6">
-        <p class="text-sm font-medium text-gray-600 mb-2">Output Format</p>
-        <div class="flex gap-3">
-          <label class="flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer transition-colors
-            {outputFormat === 'pptx' ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}">
-            <input type="radio" name="format" value="pptx" bind:group={outputFormat} class="accent-blue-600" />
-            <span class="text-sm">.pptx (PowerPoint)</span>
-          </label>
-          <label class="flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer transition-colors opacity-50
-            {outputFormat === 'pdf' ? 'border-blue-400 bg-blue-50' : 'border-gray-200'}">
-            <input type="radio" name="format" value="pdf" bind:group={outputFormat} class="accent-blue-600" disabled />
-            <span class="text-sm">.pdf (Coming soon)</span>
-          </label>
-        </div>
-      </div>
+	<!-- Step 4: Generating -->
+	{#if step === 'generating'}
+		<div class="t-card p-8 text-center">
+			<p class="text-base font-semibold text-gray-800 mb-1">
+				Generating presentation<span class="animate-blink">...</span>
+			</p>
+			<p class="text-xs text-gray-500">Building slides with the selected template</p>
+		</div>
+	{/if}
 
-      <!-- Actions -->
-      <div class="flex items-center justify-between">
-        <button
-          class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
-          onclick={handleReset}
-        >
-          ← Start over
-        </button>
-        <button
-          class="px-6 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
-          onclick={handleGenerate}
-        >
-          Generate Presentation 🎉
-        </button>
-      </div>
-    </div>
-  {/if}
-
-  <!-- Generating step -->
-  {#if step === 'generating'}
-    <div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
-      <div class="animate-spin text-4xl mb-4">🎨</div>
-      <p class="text-lg font-medium text-gray-700">Generating your presentation...</p>
-      <p class="text-sm text-gray-500 mt-2">Building slides with themes and visuals</p>
-    </div>
-  {/if}
-
-  <!-- Done step -->
-  {#if step === 'done'}
-    <div class="bg-white rounded-xl border border-green-200 p-12 text-center">
-      <div class="text-5xl mb-4">✅</div>
-      <p class="text-lg font-medium text-gray-800">Presentation downloaded!</p>
-      <p class="text-sm text-gray-500 mt-2 mb-6">Check your downloads folder for the .pptx file</p>
-      <button
-        class="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-        onclick={handleReset}
-      >
-        Create another presentation
-      </button>
-    </div>
-  {/if}
+	<!-- Step 4: Done -->
+	{#if step === 'done'}
+		<div class="t-card p-8 text-center">
+			<p class="text-base font-semibold text-gray-800 mb-1">[done] Presentation downloaded.</p>
+			<p class="text-xs text-gray-500">Check your downloads folder for the .pptx file</p>
+			<button class="t-btn mt-4" onclick={handleReset}
+				>[<span class="underline">create another presentation</span>]</button
+			>
+		</div>
+	{/if}
 </div>

@@ -1,1 +1,161 @@
 @import 'tailwindcss';
+
+@layer base {
+	html,
+	input,
+	textarea,
+	select,
+	button {
+		font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+	}
+}
+
+@layer components {
+	.t-card {
+		background-color: var(--color-white);
+		border: 1px solid var(--color-gray-200);
+	}
+
+	.t-btn {
+		padding: 0.5rem 1rem;
+		border: 1px solid var(--color-gray-300);
+		background-color: var(--color-white);
+		color: var(--color-gray-900);
+		font-size: 0.875rem;
+		cursor: pointer;
+		transition: background-color 0.15s;
+	}
+
+	.t-btn:hover {
+		background-color: var(--color-gray-50);
+	}
+
+	.t-btn:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
+	}
+
+	.t-btn-text {
+		padding: 0.5rem 1rem;
+		color: var(--color-gray-500);
+		font-size: 0.875rem;
+		cursor: pointer;
+		background: none;
+		border: none;
+		transition: color 0.15s;
+	}
+
+	.t-btn-text:hover {
+		color: var(--color-gray-900);
+	}
+
+	.t-btn-text:hover .t-btn-label {
+		text-decoration: underline;
+	}
+
+	.t-input-border {
+		border-bottom: 1px solid var(--color-gray-200);
+		outline: none;
+		transition:
+			border-color 0.15s,
+			box-shadow 0.15s;
+	}
+
+	.t-input-border:focus {
+		border-bottom-color: var(--color-gray-900);
+		box-shadow: inset 0 -1px 0 0 var(--color-gray-900);
+	}
+
+	.hide-scrollbar {
+		-ms-overflow-style: none;
+		scrollbar-width: none;
+	}
+
+	.hide-scrollbar::-webkit-scrollbar {
+		display: none;
+	}
+
+	.input-tab {
+		padding: 0.375rem 0.75rem;
+		border: 1px solid var(--color-gray-300);
+		background-color: var(--color-gray-50);
+		color: var(--color-gray-500);
+
+		font-size: 0.75rem;
+		cursor: pointer;
+		transition: all 0.15s;
+	}
+
+	.input-tab-active {
+		border-color: var(--color-gray-900);
+		background-color: var(--color-white);
+		color: var(--color-gray-900);
+		font-weight: 600;
+	}
+
+	.modal-overlay {
+		position: fixed;
+		inset: 0;
+		background-color: rgba(0, 0, 0, 0.25);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 50;
+	}
+
+	.modal-card {
+		background-color: var(--color-white);
+		border: 1px solid var(--color-gray-300);
+		padding: 1.5rem;
+		max-width: 28rem;
+		width: 90%;
+	}
+
+	.t-code {
+		font-size: 0.75rem;
+		background-color: var(--color-gray-50);
+		border: 1px solid var(--color-gray-200);
+		padding: 0.75rem 1rem;
+		white-space: pre;
+		overflow-x: auto;
+		line-height: 1.6;
+		color: var(--color-gray-700);
+	}
+}
+
+@keyframes blink {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0;
+	}
+}
+
+.animate-blink {
+	animation: blink 1.2s infinite;
+}
+
+@keyframes guide-attention {
+	0% {
+		border-color: var(--color-gray-200);
+		background-color: transparent;
+	}
+	15% {
+		border-color: var(--color-gray-900);
+		background-color: var(--color-gray-100);
+	}
+	70% {
+		border-color: var(--color-gray-200);
+		background-color: transparent;
+	}
+	100% {
+		border-color: var(--color-gray-200);
+		background-color: transparent;
+	}
+}
+
+.animate-guide-attention {
+	animation: guide-attention 1.8s ease-out infinite;
+}
