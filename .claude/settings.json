@@ -1,42 +1,17 @@
 {
 	"hooks": {
-		"SessionStart": [
-			{
-				"hooks": [
-					{
-						"type": "command",
-						"command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-context.sh"
-					}
-				]
-			}
-		],
-		"PreToolUse": [
-			{
-				"matcher": "Bash",
-				"hooks": [
-					{
-						"type": "command",
-						"command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-dangerous.sh"
-					},
-					{
-						"type": "command",
-						"command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/commit-convention.sh"
-					}
-				]
-			}
-		],
 		"PostToolUse": [
 			{
 				"matcher": "Write|Edit",
 				"hooks": [
 					{
 						"type": "command",
-						"command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/format.sh",
+						"command": "~/.claude/hooks/format-prettier.sh",
 						"timeout": 30
 					},
 					{
 						"type": "command",
-						"command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/typecheck.sh",
+						"command": "~/.claude/hooks/typecheck-svelte.sh",
 						"timeout": 60,
 						"async": true
 					}
@@ -48,7 +23,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/verify-before-stop.sh",
+						"command": "~/.claude/hooks/build-vite.sh",
 						"timeout": 120
 					}
 				]
