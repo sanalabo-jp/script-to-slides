@@ -181,12 +181,14 @@
 			<button
 				class="input-tab {templateTab === 'presets' ? 'input-tab-active' : ''}"
 				onclick={() => {
+					selectedTemplate = null;
 					templateTab = 'presets';
 				}}>Presets</button
 			>
 			<button
 				class="input-tab {templateTab === 'custom' ? 'input-tab-active' : ''}"
 				onclick={() => {
+					selectedTemplate = null;
 					templateTab = 'custom';
 				}}>Custom</button
 			>
