@@ -69,8 +69,9 @@
 
 	function openEditor(mode: EditorMode, template: SlideTemplate) {
 		editorMode = mode;
-		editorTemplate = structuredClone(template);
-		previewTemplate = structuredClone(template);
+		const plain = $state.snapshot(template);
+		editorTemplate = structuredClone(plain);
+		previewTemplate = structuredClone(plain);
 	}
 
 	function closeEditor() {

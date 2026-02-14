@@ -15,8 +15,8 @@
 		onChange: (template: SlideTemplate) => void;
 	} = $props();
 
-	// Deep clone for editing
-	let template: SlideTemplate = $state(structuredClone(initialTemplate));
+	// Deep clone for editing — $state.snapshot unwraps Svelte 5 proxy before cloning
+	let template: SlideTemplate = $state(structuredClone($state.snapshot(initialTemplate)));
 	let autoDerive = $state(true);
 
 	// Track custom font input mode per style key
@@ -56,7 +56,7 @@
 			const s = template.styles[key];
 			void (s.fontFamily + s.fontSize + s.fontColor + s.fontWeight);
 		}
-		onChange(structuredClone(template));
+		onChange($state.snapshot(template));
 	});
 
 	function handleFontFamilyChange(key: StyleKey, value: string) {
