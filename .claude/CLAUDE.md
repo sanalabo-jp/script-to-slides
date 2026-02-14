@@ -59,7 +59,7 @@ src/
 │   │   ├── pptxTemplateParser.ts # .pptx → SlideTemplate 추출 (JSZip + DOMParser)
 │   │   └── pptxTemplateUtils.ts  # 파서 순수 함수 + 타입 (lightenColor, mergeStyles, buildTemplate 등)
 │   ├── templates/
-│   │   └── templateUtils.ts      # 템플릿 유틸 (deriveCallout2, createBlankCustomTemplate, FONT_FAMILY_PRESETS)
+│   │   └── templateUtils.ts      # 템플릿 유틸 (deriveCallout2, createBlankCustomTemplate, resolveUniqueName, FONT_FAMILY_PRESETS)
 │   ├── types/
 │   │   └── index.ts              # 타입 정의 (ScriptLine, ChatMessage, SpeakerProfile, SlideTemplate 등)
 │   ├── utils/
@@ -76,7 +76,7 @@ src/
 │       ├── MetadataModal.svelte   # 행 메타데이터 key-value 편집 모달
 │       ├── TemplateSelector.svelte # 프리셋 탭 (프리셋 목록 + tooltip)
 │       ├── CustomTemplateTab.svelte # 커스텀 탭 (템플릿 리스트 + 추출/생성 + 에디터)
-│       ├── TemplatePreviewCard.svelte # 재사용 4:3 미리보기 카드 (title truncate, desc line-clamp-2)
+│       ├── TemplatePreviewCard.svelte # 재사용 4:3 미리보기 카드 (title bold truncate, desc truncate 1줄, [*] title 인라인)
 │       ├── TemplateEditor.svelte  # 인라인 폼 (name/desc/폰트/색상/굵기 + callout2 자동파생)
 │       └── TemplateTooltip.svelte # hover 시 floating 상세 미리보기
 ├── routes/
@@ -95,10 +95,12 @@ src/
 
 ## CustomTemplateTab 구조 (현재)
 - **customTemplates[]**: 사용자 생성/추출 템플릿 리스트 (컴포넌트 내부 상태, hidden으로 탭 전환 시 보존)
-- **Section 1**: Your Templates — 그리드 + [edit]/[delete] 버튼, radio group 선택
-- **Section 2**: Add New — drop zone (.pptx 추출) + [create new template] (editorMode === 'none'일 때만)
+- **Section 1**: Your Templates — grid-cols-3 + [del]/[edit] 버튼 (right-align, `/` 구분자), radio group 선택
+- **Section 2**: Add New — drop zone py-24 px-8 (.pptx 추출) + [create new template] (editorMode === 'none'일 때만)
 - **Section 3**: Editor — 에디터 폼 + 라이브 프리뷰, [cancel] + [add this template]/[update template]
 - **EditorMode**: 'none' | 'new-extract' | 'new-scratch' | 'edit'
+- **중복 이름 처리**: `resolveUniqueName(name, existingNames)` → 자동 _1, _2 접미사
+- **PPTX 다운로드 파일명**: `template.name` (공백 → `_`)
 
 ## UI 디자인 컨벤션
 - **테마**: macOS Terminal 스타일 모노크롬 (font-mono, gray 팔레트)
@@ -106,6 +108,8 @@ src/
 - **애니메이션**: `animate-guide-attention` (비대칭 1.8s, gray-900 피크), `animate-cell-in` (셀 슬라이드인)
 - **탭 스타일**: `.input-tab`, `.input-tab-active` (File/Manual 전환용)
 - **모달**: `.modal-overlay`, `.modal-card`
+- **버튼 그룹**: `[del] / [edit]` 순서, `/` 구분자, edit는 `font-bold`
+- **카드 선택 표시**: `[*]`를 title 우측 인라인 (인증마크 스타일, absolute 아님)
 
 ## Vercel 설정
 - `vercel.json`: `{ "$schema": "...", "framework": "sveltekit" }` (최소화)
@@ -193,6 +197,9 @@ src/
 6. pptxgenjs .replace() 에러 → safeColor() + String() 캐스팅
 
 ## 해결된 버그들 (기능1 Phase 2+3)
-7. TemplatePreviewCard 크기 불균일 → w-full h-full 추가
+7. TemplatePreviewCard 크기 불균일 → w-full 추가 (h-full은 이후 제거)
 8. Custom 탭 섹션 소멸 (DataCloneError) → structuredClone → $state.snapshot 전환
 9. 탭 전환 시 customTemplates 상태 소실 → {#if} → class:hidden
+10. Custom 탭 카드가 Preset 탭보다 큼 → h-full 제거 (grid cell 내 [del]/[edit] 포함 시 확장 문제)
+11. ChatCell 버튼 순서 불일치 → [del]/[edit] 순서로 통일
+12. Custom 드롭존 크기 부족 → FileUpload와 동일 py-24 px-8
