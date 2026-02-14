@@ -42,26 +42,50 @@
 		return file.name.toLowerCase().endsWith('.pptx');
 	}
 
-	async function handleFile(file: File) {
+	function autoSaveEditorIfNeeded() {
+		if (editorMode !== 'none' && editorMode !== 'edit' && previewTemplate) {
+			handleAddOrUpdateTemplate();
+		}
+	}
+
+	async function handleFiles(files: FileList | File[]) {
 		errorMsg = '';
 		extractWarnings = [];
-		closeEditor();
+		autoSaveEditorIfNeeded();
 
-		if (!isPptx(file)) {
-			errorMsg = 'Unsupported file type. Only .pptx files are accepted.';
+		const pptxFiles = Array.from(files).filter(isPptx);
+		if (pptxFiles.length === 0) {
+			errorMsg = 'No .pptx files found.';
 			return;
 		}
 
 		isLoading = true;
-		try {
-			const result = await parsePptxTemplate(file);
-			extractWarnings = result.warnings;
-			openNewEditor('new-extract', result.template);
-		} catch (e) {
-			errorMsg = `Style extraction failed: ${e instanceof Error ? e.message : String(e)}`;
-		} finally {
-			isLoading = false;
+		let lastAdded: SlideTemplate | null = null;
+
+		for (const file of pptxFiles) {
+			try {
+				const result = await parsePptxTemplate(file);
+
+				if (result.isPartial) {
+					// 부분 추출 → 에디터 열기 (마지막 partial만 에디터에 남음)
+					autoSaveEditorIfNeeded();
+					extractWarnings = result.warnings;
+					openNewEditor('new-extract', result.template);
+				} else {
+					// 완전 추출 → 자동 리스트 추가
+					const existingNames = customTemplates.map((t) => t.name);
+					const newTemplate = structuredClone($state.snapshot(result.template));
+					newTemplate.name = resolveUniqueName(newTemplate.name, existingNames);
+					customTemplates.push(newTemplate);
+					lastAdded = newTemplate;
+				}
+			} catch (e) {
+				errorMsg = `${file.name}: ${e instanceof Error ? e.message : String(e)}`;
+			}
 		}
+
+		if (lastAdded) onSelect(lastAdded);
+		isLoading = false;
 	}
 
 	function openNewEditor(mode: 'new-extract' | 'new-scratch', template: SlideTemplate) {
@@ -137,8 +161,8 @@
 	function onDrop(e: DragEvent) {
 		e.preventDefault();
 		isDragging = false;
-		const file = e.dataTransfer?.files?.[0];
-		if (file) handleFile(file);
+		const files = e.dataTransfer?.files;
+		if (files && files.length > 0) handleFiles(files);
 	}
 
 	function onDragOver(e: DragEvent) {
@@ -152,8 +176,8 @@
 
 	function onInputChange(e: Event) {
 		const input = e.target as HTMLInputElement;
-		const file = input.files?.[0];
-		if (file) handleFile(file);
+		const files = input.files;
+		if (files && files.length > 0) handleFiles(files);
 		input.value = '';
 	}
 
@@ -241,7 +265,11 @@
 						</p>
 					{:else}
 						<p class="text-sm text-gray-700 mb-1">
-							{isDragging ? 'Drop .pptx file here' : 'Drop .pptx or click to extract styles'}
+							{isDragging
+								? 'Drop .pptx files here'
+								: customTemplates.length > 0
+									? `Drop .pptx or click to extract styles (${customTemplates.length} templates)`
+									: 'Drop .pptx or click to extract styles'}
 						</p>
 						<p class="text-xs text-gray-400">.pptx (PowerPoint)</p>
 					{/if}
@@ -249,6 +277,7 @@
 						id="pptx-input"
 						type="file"
 						accept=".pptx"
+						multiple
 						class="hidden"
 						onchange={onInputChange}
 					/>
