@@ -51,6 +51,7 @@
 	$effect(() => {
 		// Read all template fields to track
 		void template.name;
+		void template.description;
 		void template.background.color;
 		for (const { key } of styleEntries) {
 			const s = template.styles[key];
@@ -81,6 +82,17 @@
 			type="text"
 			class="w-full text-xs px-2 py-1.5 t-input-border bg-transparent"
 			bind:value={template.name}
+		/>
+	</div>
+
+	<!-- Description -->
+	<div class="space-y-1">
+		<label class="text-[10px] text-gray-400 uppercase tracking-wider">Description</label>
+		<input
+			type="text"
+			class="w-full text-xs px-2 py-1.5 t-input-border bg-transparent"
+			placeholder="Template description (optional)"
+			bind:value={template.description}
 		/>
 	</div>
 

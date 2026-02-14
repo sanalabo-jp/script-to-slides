@@ -191,9 +191,10 @@
 			>
 		</div>
 
-		{#if templateTab === 'presets'}
+		<div class:hidden={templateTab !== 'presets'}>
 			<TemplateSelector {selectedTemplate} onSelect={handleTemplateSelect} />
-		{:else}
+		</div>
+		<div class:hidden={templateTab !== 'custom'}>
 			<CustomTemplateTab
 				{selectedTemplate}
 				onSelect={handleTemplateSelect}
@@ -201,7 +202,7 @@
 					templateTab = 'presets';
 				}}
 			/>
-		{/if}
+		</div>
 
 		<!-- Format selector -->
 		<div class="t-card p-4">

@@ -16,16 +16,19 @@
 		onSwitchToPresets: () => void;
 	} = $props();
 
-	// --- Extract state ---
+	// --- Custom templates list ---
+	let customTemplates: SlideTemplate[] = $state([]);
+
+	// --- Extract/drop state ---
 	let isDragging = $state(false);
 	let isLoading = $state(false);
 	let errorMsg = $state('');
 	let extractWarnings: string[] = $state([]);
-	let extractedTemplate: SlideTemplate | null = $state(null);
 
 	// --- Editor state ---
-	type EditorMode = 'none' | 'extract-edit' | 'scratch';
+	type EditorMode = 'none' | 'new-extract' | 'new-scratch' | 'edit';
 	let editorMode: EditorMode = $state('none');
+	let editingIndex = $state(-1);
 	let editorTemplate: SlideTemplate | null = $state(null);
 	let previewTemplate: SlideTemplate | null = $state(null);
 
@@ -42,7 +45,6 @@
 	async function handleFile(file: File) {
 		errorMsg = '';
 		extractWarnings = [];
-		extractedTemplate = null;
 		closeEditor();
 
 		if (!isPptx(file)) {
@@ -53,13 +55,8 @@
 		isLoading = true;
 		try {
 			const result = await parsePptxTemplate(file);
-			extractedTemplate = result.template;
 			extractWarnings = result.warnings;
-
-			if (result.isPartial) {
-				// Partial extraction → open editor automatically
-				openEditor('extract-edit', result.template);
-			}
+			openNewEditor('new-extract', result.template);
 		} catch (e) {
 			errorMsg = `Style extraction failed: ${e instanceof Error ? e.message : String(e)}`;
 		} finally {
@@ -67,15 +64,25 @@
 		}
 	}
 
-	function openEditor(mode: EditorMode, template: SlideTemplate) {
+	function openNewEditor(mode: 'new-extract' | 'new-scratch', template: SlideTemplate) {
 		editorMode = mode;
+		editingIndex = -1;
 		const plain = $state.snapshot(template);
+		editorTemplate = structuredClone(plain);
+		previewTemplate = structuredClone(plain);
+	}
+
+	function openEditEditor(index: number) {
+		editorMode = 'edit';
+		editingIndex = index;
+		const plain = $state.snapshot(customTemplates[index]);
 		editorTemplate = structuredClone(plain);
 		previewTemplate = structuredClone(plain);
 	}
 
 	function closeEditor() {
 		editorMode = 'none';
+		editingIndex = -1;
 		editorTemplate = null;
 		previewTemplate = null;
 	}
@@ -84,22 +91,40 @@
 		previewTemplate = updated;
 	}
 
-	function handleUseTemplate() {
-		if (previewTemplate) {
-			onSelect(previewTemplate);
-			closeEditor();
+	function handleAddOrUpdateTemplate() {
+		if (!previewTemplate) return;
+		const plain = $state.snapshot(previewTemplate);
+
+		if (editorMode === 'edit' && editingIndex >= 0) {
+			// Update existing template
+			const updated = structuredClone(plain);
+			customTemplates[editingIndex] = updated;
+			if (selectedTemplate?.id === plain.id) {
+				onSelect(updated);
+			}
+		} else {
+			// Add new template to the list
+			const newTemplate = structuredClone(plain);
+			customTemplates.push(newTemplate);
+			// Auto-select newly added template
+			onSelect(newTemplate);
+		}
+		closeEditor();
+	}
+
+	function handleDeleteTemplate(index: number) {
+		const deletedId = customTemplates[index].id;
+		customTemplates.splice(index, 1);
+
+		// If deleted template was selected, select first remaining
+		if (selectedTemplate?.id === deletedId && customTemplates.length > 0) {
+			onSelect($state.snapshot(customTemplates[0]));
 		}
 	}
 
 	function handleCreateScratch() {
 		const blank = createBlankCustomTemplate();
-		openEditor('scratch', blank);
-	}
-
-	function handleEditExtracted() {
-		if (extractedTemplate) {
-			openEditor('extract-edit', extractedTemplate);
-		}
+		openNewEditor('new-scratch', blank);
 	}
 
 	// --- Drop zone handlers ---
@@ -139,60 +164,16 @@
 	</div>
 
 	<div class="p-4 space-y-6">
-		<!-- ═══ Section 1: Extract from .pptx ═══ -->
-		<div class="space-y-3">
-			<p class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Extract from .pptx</p>
-
-			<!-- Drop zone -->
-			<div
-				class="border border-dashed py-8 px-6 text-center transition-colors cursor-pointer
-					{isDragging ? 'border-gray-500 bg-gray-50' : 'border-gray-300 bg-white hover:border-gray-400'}"
-				role="button"
-				tabindex="0"
-				ondrop={onDrop}
-				ondragover={onDragOver}
-				ondragleave={onDragLeave}
-				onclick={() => document.getElementById('pptx-input')?.click()}
-				onkeydown={(e) => {
-					if (e.key === 'Enter') document.getElementById('pptx-input')?.click();
-				}}
-			>
-				{#if isLoading}
-					<p class="text-sm text-gray-500">
-						<span class="animate-blink">_</span> extracting styles...
-					</p>
-				{:else}
-					<p class="text-sm text-gray-700 mb-1">
-						{isDragging ? 'Drop .pptx file here' : 'Drop .pptx file or click to browse'}
-					</p>
-					<p class="text-xs text-gray-400">.pptx (PowerPoint)</p>
-				{/if}
-				<input id="pptx-input" type="file" accept=".pptx" class="hidden" onchange={onInputChange} />
-			</div>
-
-			<!-- Error state -->
-			{#if errorMsg}
-				<div class="t-card p-3 space-y-2">
-					<p class="text-xs text-red-600">[error] {errorMsg}</p>
-					<div class="flex gap-2">
-						<button class="t-btn text-xs" onclick={onSwitchToPresets}>[switch to presets]</button>
-						<button class="t-btn text-xs" onclick={handleCreateScratch}>[build from scratch]</button
-						>
-					</div>
-				</div>
-			{/if}
-
-			<!-- Extracted template card -->
-			{#if extractedTemplate && editorMode !== 'extract-edit'}
-				{@const isSelected = selectedTemplate?.id === extractedTemplate.id}
-				<div class="space-y-2">
-					<p class="text-xs text-gray-500">Extracted template:</p>
-					<div class="flex items-end gap-3">
+		<!-- ═══ Section 1: Your Templates (radio group) ═══ -->
+		{#if customTemplates.length > 0}
+			<div class="space-y-3">
+				<p class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Your Templates</p>
+				<div class="grid grid-cols-3 gap-3">
+					{#each customTemplates as template, i}
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div
-							class="max-w-44"
 							onmouseenter={() => {
-								tooltipTemplate = extractedTemplate;
+								tooltipTemplate = template;
 								tooltipVisible = true;
 							}}
 							onmousemove={handleMouseMove}
@@ -202,37 +183,84 @@
 							}}
 						>
 							<TemplatePreviewCard
-								template={extractedTemplate}
-								{isSelected}
-								onClick={() => onSelect(extractedTemplate!)}
-								class="w-full"
+								{template}
+								isSelected={selectedTemplate?.id === template.id}
+								onClick={() => onSelect(template)}
 							/>
+							<div class="flex gap-2 mt-1 justify-center">
+								<button
+									class="text-xs text-gray-500 hover:text-gray-900 cursor-pointer"
+									onclick={() => openEditEditor(i)}
+								>
+									[edit]
+								</button>
+								<button
+									class="text-xs text-red-400 hover:text-red-600 cursor-pointer"
+									onclick={() => handleDeleteTemplate(i)}
+								>
+									[delete]
+								</button>
+							</div>
 						</div>
-						<div class="flex flex-col gap-1.5 pb-1">
-							<button
-								class="text-xs text-gray-500 hover:text-gray-900 cursor-pointer"
-								onclick={handleEditExtracted}
+					{/each}
+				</div>
+			</div>
+		{/if}
+
+		<!-- ═══ Section 2: Add New (drop zone + create button) ═══ -->
+		{#if editorMode === 'none'}
+			<div class="space-y-3 {customTemplates.length > 0 ? 'border-t border-gray-100 pt-4' : ''}">
+				<p class="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+					{customTemplates.length > 0 ? 'Add New' : 'Create Template'}
+				</p>
+
+				<!-- Drop zone -->
+				<div
+					class="border border-dashed py-6 px-4 text-center transition-colors cursor-pointer
+						{isDragging ? 'border-gray-500 bg-gray-50' : 'border-gray-300 bg-white hover:border-gray-400'}"
+					role="button"
+					tabindex="0"
+					ondrop={onDrop}
+					ondragover={onDragOver}
+					ondragleave={onDragLeave}
+					onclick={() => document.getElementById('pptx-input')?.click()}
+					onkeydown={(e) => {
+						if (e.key === 'Enter') document.getElementById('pptx-input')?.click();
+					}}
+				>
+					{#if isLoading}
+						<p class="text-sm text-gray-500">
+							<span class="animate-blink">_</span> extracting styles...
+						</p>
+					{:else}
+						<p class="text-sm text-gray-700 mb-1">
+							{isDragging ? 'Drop .pptx file here' : 'Drop .pptx or click to extract styles'}
+						</p>
+						<p class="text-xs text-gray-400">.pptx (PowerPoint)</p>
+					{/if}
+					<input
+						id="pptx-input"
+						type="file"
+						accept=".pptx"
+						class="hidden"
+						onchange={onInputChange}
+					/>
+				</div>
+
+				<!-- Error state -->
+				{#if errorMsg}
+					<div class="t-card p-3 space-y-2">
+						<p class="text-xs text-red-600">[error] {errorMsg}</p>
+						<div class="flex gap-2">
+							<button class="t-btn text-xs" onclick={onSwitchToPresets}>[switch to presets]</button>
+							<button class="t-btn text-xs" onclick={handleCreateScratch}
+								>[build from scratch]</button
 							>
-								[edit]
-							</button>
-							<button
-								class="text-xs text-gray-500 hover:text-gray-900 cursor-pointer"
-								onclick={() => onSelect(extractedTemplate!)}
-							>
-								[use as-is]
-							</button>
 						</div>
 					</div>
-				</div>
-			{/if}
-		</div>
+				{/if}
 
-		<!-- ═══ Section 2: Build from scratch ═══ -->
-		{#if editorMode === 'none'}
-			<div class="space-y-3 border-t border-gray-100 pt-4">
-				<p class="text-xs font-semibold text-gray-600 uppercase tracking-wider">
-					Build from scratch
-				</p>
+				<!-- Build from scratch -->
 				<button class="t-btn text-xs" onclick={handleCreateScratch}> [create new template] </button>
 			</div>
 		{/if}
@@ -240,20 +268,16 @@
 		<!-- ═══ Section 3: Editor ═══ -->
 		{#if editorMode !== 'none' && editorTemplate}
 			<div class="border-t border-gray-100 pt-4 space-y-3">
-				<div class="flex items-center justify-between">
-					<p class="text-xs font-semibold text-gray-600 uppercase tracking-wider">
-						{editorMode === 'extract-edit' ? 'Edit Extracted' : 'New Template'}
-					</p>
-					<button
-						class="text-xs text-gray-400 hover:text-gray-700 cursor-pointer"
-						onclick={closeEditor}
-					>
-						[cancel]
-					</button>
-				</div>
+				<p class="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+					{editorMode === 'edit'
+						? 'Edit Template'
+						: editorMode === 'new-extract'
+							? 'Extracted Template'
+							: 'New Template'}
+				</p>
 
 				<!-- Warnings from partial extraction -->
-				{#if extractWarnings.length > 0 && editorMode === 'extract-edit'}
+				{#if extractWarnings.length > 0 && editorMode === 'new-extract'}
 					<div class="border-l-2 border-yellow-400 bg-yellow-50 px-3 py-2 space-y-1">
 						<p class="text-[10px] text-yellow-700 font-semibold uppercase">Partial extraction</p>
 						{#each extractWarnings as warning}
@@ -297,8 +321,14 @@
 					<button class="t-btn-text text-xs" onclick={closeEditor}>
 						[<span class="t-btn-label">cancel</span>]
 					</button>
-					<button class="t-btn text-xs" onclick={handleUseTemplate}>
-						[<span class="underline">use this template</span>]
+					<button
+						class="t-btn text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+						onclick={handleAddOrUpdateTemplate}
+						disabled={!previewTemplate?.name?.trim()}
+					>
+						[<span class="underline"
+							>{editorMode === 'edit' ? 'update template' : 'add this template'}</span
+						>]
 					</button>
 				</div>
 			</div>

@@ -47,9 +47,15 @@
 		</div>
 	</div>
 
-	<!-- Template info -->
-	<p class="text-xs font-medium text-gray-800">{template.name}</p>
-	<p class="text-xs text-gray-500 mt-0.5">{template.description}</p>
+	<!-- Template info (fixed height) -->
+	<p class="text-xs font-medium text-gray-800 truncate">{template.name}</p>
+	<div class="mt-0.5 min-h-[2rem]">
+		{#if template.description}
+			<p class="text-xs text-gray-500 line-clamp-2">{template.description}</p>
+		{:else}
+			<p class="text-xs text-gray-300 line-clamp-2">[empty]<br />\</p>
+		{/if}
+	</div>
 
 	<!-- Selection indicator -->
 	{#if isSelected}
