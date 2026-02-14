@@ -9,7 +9,8 @@ import {
 	DEFAULT_FONT,
 	resolveFont,
 	mergeStyles,
-	buildTemplate
+	buildTemplate,
+	applyColorModifiers
 } from './pptxTemplateUtils';
 
 // === Public API ===
@@ -229,6 +230,19 @@ function extractBackground(doc: Document, theme: ThemeData): string | null {
 	if (bgPr) {
 		const solidFill = bgPr.getElementsByTagName('a:solidFill')[0];
 		if (solidFill) return resolveColor(solidFill, theme);
+
+		// gradient fallback: 첫 번째 stop 색상을 대표값으로 사용
+		const gradFill = bgPr.getElementsByTagName('a:gradFill')[0];
+		if (gradFill) {
+			const gsLst = gradFill.getElementsByTagName('a:gsLst')[0];
+			if (gsLst) {
+				const firstGs = gsLst.getElementsByTagName('a:gs')[0];
+				if (firstGs) {
+					const color = resolveColor(firstGs, theme);
+					if (color) return color;
+				}
+			}
+		}
 	}
 
 	const bgRef = doc.getElementsByTagName('p:bgRef')[0];
@@ -241,30 +255,35 @@ function extractBackground(doc: Document, theme: ThemeData): string | null {
 }
 
 function resolveColor(el: Element, theme: ThemeData): string | null {
-	// srgbClr: 직접 hex
+	// srgbClr: 직접 hex + modifier 적용
 	const srgbClr = el.getElementsByTagName('a:srgbClr')[0];
 	if (srgbClr) {
 		const val = srgbClr.getAttribute('val');
-		if (val) return `#${val}`;
+		if (val) return applyColorModifiers(`#${val}`, srgbClr);
 	}
 
-	// schemeClr: 테마 참조
+	// schemeClr: 테마 참조 + modifier 적용
 	const schemeClr = el.getElementsByTagName('a:schemeClr')[0];
 	if (schemeClr) {
 		const val = schemeClr.getAttribute('val');
+		let baseColor: string | null = null;
+
 		if (val && theme.colorScheme[val]) {
-			return theme.colorScheme[val];
+			baseColor = theme.colorScheme[val];
+		} else {
+			// tx1 → dk1, tx2 → dk2, bg1 → lt1, bg2 → lt2 매핑
+			const alias: Record<string, string> = {
+				tx1: 'dk1',
+				tx2: 'dk2',
+				bg1: 'lt1',
+				bg2: 'lt2'
+			};
+			if (val && alias[val] && theme.colorScheme[alias[val]]) {
+				baseColor = theme.colorScheme[alias[val]];
+			}
 		}
-		// tx1 → dk1, tx2 → dk2, bg1 → lt1, bg2 → lt2 매핑
-		const alias: Record<string, string> = {
-			tx1: 'dk1',
-			tx2: 'dk2',
-			bg1: 'lt1',
-			bg2: 'lt2'
-		};
-		if (val && alias[val] && theme.colorScheme[alias[val]]) {
-			return theme.colorScheme[alias[val]];
-		}
+
+		if (baseColor) return applyColorModifiers(baseColor, schemeClr);
 	}
 
 	return null;
