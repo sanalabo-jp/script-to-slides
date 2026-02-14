@@ -104,7 +104,7 @@ src/
 ## CustomTemplateTab 구조 (현재)
 - **customTemplates[]**: 사용자 생성/추출 템플릿 리스트 (컴포넌트 내부 상태, hidden으로 탭 전환 시 보존)
 - **Section 1**: Your Templates — grid-cols-3 + [del]/[edit] 버튼 (right-align, `/` 구분자), radio group 선택
-- **Section 2**: Add New — drop zone py-24 px-8 (.pptx 다중 파일 추출, `multiple` 지원) + [create new template] (editorMode === 'none'일 때만)
+- **Section 2**: Add New — 드롭존(항상 표시) + [create new template](에디터 닫힘 시만 표시). 다중 파일 추출 `multiple` 지원
 - **Section 3**: Editor — 에디터 폼 + 라이브 프리뷰, [cancel] + [add this template]/[update template]
 - **EditorMode**: 'none' | 'new-extract' | 'new-scratch' | 'edit'
 - **다중 파일 업로드**: `handleFiles()` — 완전 추출(`isPartial=false`) → 자동 리스트 추가, 부분 추출(`isPartial=true`) → 에디터 열기
@@ -223,3 +223,4 @@ src/
 ## 해결된 버그들 (v1.0.2 UX)
 18. 템플릿 삭제 시 잔존 툴팁 → handleDeleteTemplate()에서 명시적 tooltip 리셋 ({#each} DOM 즉시 제거로 onmouseleave 미발생)
 19. 탭 전환 시 이전 선택 잔존 → selectedTemplate null 초기화 (Presets↔Custom 전환 시 Generate 버튼 부적절 활성화 방지)
+20. 에디터 열린 상태에서 드롭존 숨김 → Section 2의 `{#if editorMode === 'none'}` 래핑 제거, 드롭존 항상 표시 + [create new template]만 조건부
