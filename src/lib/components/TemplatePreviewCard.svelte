@@ -16,7 +16,7 @@
 
 <button
 	class="group relative border p-3 transition-all text-left w-full
-		{isSelected ? 'border-gray-900 border-2' : 'border-gray-200 hover:border-gray-400'}
+		{isSelected ? 'border-gray-900 border-2' : 'border-gray-200 border-2 hover:border-gray-400'}
 		{className}"
 	onclick={onClick}
 >
