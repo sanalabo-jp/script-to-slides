@@ -74,10 +74,10 @@ src/
 │       ├── ChatCell.svelte       # 메시지 셀 (편집/삭제, 좌우 정렬)
 │       ├── SpeakerSelector.svelte  # 화자 드롭다운 (추가/제거/선택)
 │       ├── MetadataModal.svelte   # 행 메타데이터 key-value 편집 모달
-│       ├── TemplateSelector.svelte # 프리셋/커스텀 탭 전환 + 프리셋 목록
-│       ├── CustomTemplateTab.svelte # .pptx 추출 + 빈 템플릿 생성 + 에디터 통합
-│       ├── TemplatePreviewCard.svelte # 재사용 4:3 미리보기 카드
-│       ├── TemplateEditor.svelte  # 인라인 폼 (폰트/색상/굵기 + callout2 자동파생)
+│       ├── TemplateSelector.svelte # 프리셋 탭 (프리셋 목록 + tooltip)
+│       ├── CustomTemplateTab.svelte # 커스텀 탭 (템플릿 리스트 + 추출/생성 + 에디터)
+│       ├── TemplatePreviewCard.svelte # 재사용 4:3 미리보기 카드 (title truncate, desc line-clamp-2)
+│       ├── TemplateEditor.svelte  # 인라인 폼 (name/desc/폰트/색상/굵기 + callout2 자동파생)
 │       └── TemplateTooltip.svelte # hover 시 floating 상세 미리보기
 ├── routes/
 │   ├── +page.svelte              # 메인 페이지 (4단계 UI, File/Manual 탭 토글)
@@ -87,6 +87,18 @@ src/
 │       └── generate/+server.ts   # (미사용 - 클라이언트로 이동됨)
 └── app.css                        # 터미널 스타일 유틸리티 (t-card, t-btn 등), 애니메이션
 ```
+
+## Svelte 5 주의사항
+- `$state` proxy에 `structuredClone()` 직접 사용 불가 → `$state.snapshot()`으로 먼저 unwrap
+- 탭/조건부 컴포넌트 상태 보존: `{#if}` 대신 `class:hidden` 사용 (destroy/recreate 방지)
+- TemplateEditor의 `initialTemplate` prop은 `$state.snapshot`으로 unwrap 후 `structuredClone`으로 독립 복사
+
+## CustomTemplateTab 구조 (현재)
+- **customTemplates[]**: 사용자 생성/추출 템플릿 리스트 (컴포넌트 내부 상태, hidden으로 탭 전환 시 보존)
+- **Section 1**: Your Templates — 그리드 + [edit]/[delete] 버튼, radio group 선택
+- **Section 2**: Add New — drop zone (.pptx 추출) + [create new template] (editorMode === 'none'일 때만)
+- **Section 3**: Editor — 에디터 폼 + 라이브 프리뷰, [cancel] + [add this template]/[update template]
+- **EditorMode**: 'none' | 'new-extract' | 'new-scratch' | 'edit'
 
 ## UI 디자인 컨벤션
 - **테마**: macOS Terminal 스타일 모노크롬 (font-mono, gray 팔레트)
@@ -150,7 +162,7 @@ src/
 ### 기능 1: 슬라이드쇼 템플릿 지정 옵션
 - Phase 1 완료: 렌더러 비종속 추상 템플릿 프로토콜 + 기본 프리셋 3종
 - Phase 2 완료: .pptx 업로드 → JSZip+OpenXML 파서로 스타일 추출 → SlideTemplate 변환 (graceful degradation)
-- Phase 3 완료: 커스텀 템플릿 빌더 (TemplateEditor 인라인 폼 + callout2 자동파생 + 실시간 미리보기)
+- Phase 3 완료: 커스텀 템플릿 빌더 (템플릿 리스트 + edit/delete + radio group + TemplateEditor)
 - Phase 4: AI 기반 템플릿 추천 (기능5 이후)
 
 ### 기능 2: 슬라이드 컨텐츠 배치 방식 재정의
@@ -179,3 +191,8 @@ src/
 4. Gemini 모델명 404 → gemini-3-flash-preview로 수정
 5. Gemini 503 과부하 → 모델 폴백 체인
 6. pptxgenjs .replace() 에러 → safeColor() + String() 캐스팅
+
+## 해결된 버그들 (기능1 Phase 2+3)
+7. TemplatePreviewCard 크기 불균일 → w-full h-full 추가
+8. Custom 탭 섹션 소멸 (DataCloneError) → structuredClone → $state.snapshot 전환
+9. 탭 전환 시 customTemplates 상태 소실 → {#if} → class:hidden
