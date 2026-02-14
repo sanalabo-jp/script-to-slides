@@ -3,6 +3,7 @@ import {
 	deriveCallout2,
 	createBlankCustomTemplate,
 	isValidHexColor,
+	resolveUniqueName,
 	FONT_FAMILY_PRESETS,
 	FONT_WEIGHT_OPTIONS
 } from './templateUtils';
@@ -130,6 +131,34 @@ describe('isValidHexColor', () => {
 
 	it('빈 문자열을 유효하지 않다고 판정한다', () => {
 		expect(isValidHexColor('')).toBe(false);
+	});
+});
+
+// === resolveUniqueName ===
+
+describe('resolveUniqueName', () => {
+	it('중복 없으면 원본 이름을 반환한다', () => {
+		expect(resolveUniqueName('template', [])).toBe('template');
+		expect(resolveUniqueName('template', ['other'])).toBe('template');
+	});
+
+	it('중복 시 _1을 붙인다', () => {
+		expect(resolveUniqueName('template', ['template'])).toBe('template_1');
+	});
+
+	it('연속 중복 시 _2, _3을 붙인다', () => {
+		expect(resolveUniqueName('template', ['template', 'template_1'])).toBe('template_2');
+		expect(resolveUniqueName('template', ['template', 'template_1', 'template_2'])).toBe(
+			'template_3'
+		);
+	});
+
+	it('template_1의 중복은 template_1_1이 된다', () => {
+		expect(resolveUniqueName('template_1', ['template', 'template_1'])).toBe('template_1_1');
+	});
+
+	it('빈 이름도 처리한다', () => {
+		expect(resolveUniqueName('', [''])).toBe('_1');
 	});
 });
 

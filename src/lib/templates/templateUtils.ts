@@ -84,3 +84,17 @@ export function createBlankCustomTemplate(): SlideTemplate {
 export function isValidHexColor(hex: string): boolean {
 	return /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(hex);
 }
+
+/**
+ * Resolve duplicate template name by appending _1, _2, etc.
+ * e.g. 'template' with existing ['template'] → 'template_1'
+ * e.g. 'template_1' with existing ['template', 'template_1'] → 'template_1_1'
+ */
+export function resolveUniqueName(name: string, existingNames: string[]): string {
+	if (!existingNames.includes(name)) return name;
+	let i = 1;
+	while (existingNames.includes(`${name}_${i}`)) {
+		i++;
+	}
+	return `${name}_${i}`;
+}

@@ -70,7 +70,8 @@
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement('a');
 			a.href = url;
-			a.download = 'presentation.pptx';
+			const baseName = selectedTemplate.name.replace(/\s+/g, '_');
+			a.download = `${baseName}.pptx`;
 			document.body.appendChild(a);
 			a.click();
 			document.body.removeChild(a);

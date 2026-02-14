@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { SlideTemplate } from '$lib/types';
 	import { parsePptxTemplate } from '$lib/parser/pptxTemplateParser';
-	import { createBlankCustomTemplate } from '$lib/templates/templateUtils';
+	import { createBlankCustomTemplate, resolveUniqueName } from '$lib/templates/templateUtils';
 	import TemplatePreviewCard from './TemplatePreviewCard.svelte';
 	import TemplateEditor from './TemplateEditor.svelte';
 	import TemplateTooltip from './TemplateTooltip.svelte';
@@ -96,15 +96,21 @@
 		const plain = $state.snapshot(previewTemplate);
 
 		if (editorMode === 'edit' && editingIndex >= 0) {
-			// Update existing template
+			// Update existing template — resolve name if changed to a duplicate
+			const otherNames = customTemplates
+				.filter((_, idx) => idx !== editingIndex)
+				.map((t) => t.name);
 			const updated = structuredClone(plain);
+			updated.name = resolveUniqueName(updated.name, otherNames);
 			customTemplates[editingIndex] = updated;
 			if (selectedTemplate?.id === plain.id) {
 				onSelect(updated);
 			}
 		} else {
 			// Add new template to the list
+			const existingNames = customTemplates.map((t) => t.name);
 			const newTemplate = structuredClone(plain);
+			newTemplate.name = resolveUniqueName(newTemplate.name, existingNames);
 			customTemplates.push(newTemplate);
 			// Auto-select newly added template
 			onSelect(newTemplate);
@@ -187,18 +193,19 @@
 								isSelected={selectedTemplate?.id === template.id}
 								onClick={() => onSelect(template)}
 							/>
-							<div class="flex gap-2 mt-1 justify-center">
-								<button
-									class="text-xs text-gray-500 hover:text-gray-900 cursor-pointer"
-									onclick={() => openEditEditor(i)}
-								>
-									[edit]
-								</button>
+							<div class="flex gap-1 mt-1 justify-end items-center">
 								<button
 									class="text-xs text-red-400 hover:text-red-600 cursor-pointer"
 									onclick={() => handleDeleteTemplate(i)}
 								>
-									[delete]
+									[del]
+								</button>
+								<span class="text-xs text-gray-300">/</span>
+								<button
+									class="text-xs text-gray-500 hover:text-gray-900 font-bold cursor-pointer"
+									onclick={() => openEditEditor(i)}
+								>
+									[edit]
 								</button>
 							</div>
 						</div>
@@ -216,7 +223,7 @@
 
 				<!-- Drop zone -->
 				<div
-					class="border border-dashed py-6 px-4 text-center transition-colors cursor-pointer
+					class="border border-dashed py-12 px-4 text-center transition-colors cursor-pointer
 						{isDragging ? 'border-gray-500 bg-gray-50' : 'border-gray-300 bg-white hover:border-gray-400'}"
 					role="button"
 					tabindex="0"

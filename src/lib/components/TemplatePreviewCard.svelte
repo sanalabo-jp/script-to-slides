@@ -47,18 +47,16 @@
 		</div>
 	</div>
 
-	<!-- Template info (fixed height) -->
-	<p class="text-xs font-medium text-gray-800 truncate">{template.name}</p>
-	<div class="mt-0.5 min-h-[2rem]">
-		{#if template.description}
-			<p class="text-xs text-gray-500 line-clamp-2">{template.description}</p>
-		{:else}
-			<p class="text-xs text-gray-300 line-clamp-2">[empty]<br />\</p>
+	<!-- Template info -->
+	<div class="flex items-center gap-1">
+		<p class="text-xs font-bold text-gray-800 truncate min-w-0">{template.name}</p>
+		{#if isSelected}
+			<span class="text-xs text-gray-900 font-bold shrink-0">[*]</span>
 		{/if}
 	</div>
-
-	<!-- Selection indicator -->
-	{#if isSelected}
-		<div class="absolute top-1.5 right-1.5 text-xs text-gray-900 font-bold">[*]</div>
+	{#if template.description}
+		<p class="text-xs text-gray-500 truncate">{template.description}</p>
+	{:else}
+		<p class="text-xs text-gray-300 truncate">[empty]</p>
 	{/if}
 </button>
