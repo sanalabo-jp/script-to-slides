@@ -20,11 +20,8 @@
 
 	let editDialogue = $state('');
 	let editVisualHint = $state('');
-	let contentEl: HTMLDivElement;
-	let editWidth = $state<number | undefined>(undefined);
 
 	function startEdit() {
-		if (contentEl) editWidth = Math.ceil(contentEl.getBoundingClientRect().width);
 		editDialogue = message.dialogue;
 		editVisualHint = message.visualHint;
 		onEdit(message.id);
@@ -37,7 +34,6 @@
 	}
 
 	function cancelEdit() {
-		editWidth = undefined;
 		onUpdate(message.id, message.dialogue, message.visualHint);
 	}
 
@@ -68,12 +64,8 @@
 
 <div class="w-fit max-w-full {align === 'right' ? 'ml-auto' : 'mr-auto'}">
 	<div
-		bind:this={contentEl}
 		class="px-5 py-2.5 text-sm break-words {textAlign}"
-		style="background-color: {bgColor}; border-top: 2px solid {speaker.color}; {message.isEditing &&
-		editWidth
-			? `width: ${editWidth}px;`
-			: ''}"
+		style="background-color: {bgColor}; border-top: 2px solid {speaker.color};"
 	>
 		<!-- Header -->
 		<div class="mb-1">
@@ -84,16 +76,16 @@
 
 		<!-- Edit mode -->
 		{#if message.isEditing}
-			<div>
+			<div class="flex flex-col">
 				<input
 					type="text"
-					class="w-full min-w-0 text-xs text-gray-500 mb-0.5 t-input-border {textAlign}"
-					style="background-color: transparent;"
+					class="text-xs text-gray-500 mb-0.5 t-input-border {textAlign}"
+					style="background-color: transparent; field-sizing: content;"
 					placeholder="(visual hint)"
 					bind:value={editVisualHint}
 				/>
 				<textarea
-					class="w-full min-w-0 text-sm text-gray-800 leading-relaxed t-input-border resize-none {textAlign}"
+					class="text-sm text-gray-800 leading-relaxed t-input-border resize-none {textAlign}"
 					style="background-color: transparent; field-sizing: content;"
 					placeholder="Dialogue"
 					bind:value={editDialogue}
@@ -131,13 +123,13 @@
 			<!-- Action buttons -->
 			<div class="flex gap-1 items-center {justifyAlign} mt-1.5">
 				<button
-					class="text-[10px] font-bold text-gray-900 hover:text-gray-600 cursor-pointer"
-					onclick={startEdit}>[edit]</button
+					class="text-[10px] font-bold text-gray-900 hover:text-red-600 cursor-pointer"
+					onclick={() => onDelete(message.id)}>[del]</button
 				>
 				<span class="text-[10px] text-gray-900">/</span>
 				<button
-					class="text-[10px] font-bold text-gray-900 hover:text-red-600 cursor-pointer"
-					onclick={() => onDelete(message.id)}>[del]</button
+					class="text-[10px] font-bold text-gray-900 hover:text-gray-600 cursor-pointer"
+					onclick={startEdit}>[edit]</button
 				>
 			</div>
 		{/if}
