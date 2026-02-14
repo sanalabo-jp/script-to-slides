@@ -143,6 +143,8 @@
 	}
 
 	function handleDeleteTemplate(index: number) {
+		tooltipVisible = false;
+		tooltipTemplate = null;
 		const deletedId = customTemplates[index].id;
 		customTemplates.splice(index, 1);
 
