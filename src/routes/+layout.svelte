@@ -22,6 +22,6 @@
 	</main>
 
 	<footer class="text-center py-4 text-xs text-gray-400 border-t border-gray-100">
-		script-to-slides v1.0.1
+		script-to-slides v{__APP_VERSION__}
 	</footer>
 </div>
