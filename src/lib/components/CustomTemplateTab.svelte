@@ -241,67 +241,66 @@
 		{/if}
 
 		<!-- ═══ Section 2: Add New (drop zone + create button) ═══ -->
-		{#if editorMode === 'none'}
-			<div class="space-y-3 {customTemplates.length > 0 ? 'border-t border-gray-100 pt-4' : ''}">
-				<p class="text-xs font-semibold text-gray-600 uppercase tracking-wider">
-					{customTemplates.length > 0 ? 'Add New' : 'Create Template'}
-				</p>
+		<div class="space-y-3 {customTemplates.length > 0 ? 'border-t border-gray-100 pt-4' : ''}">
+			<p class="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+				{customTemplates.length > 0 ? 'Add New' : 'Create Template'}
+			</p>
 
-				<!-- Drop zone -->
-				<div
-					class="border border-dashed py-24 px-8 text-center transition-colors cursor-pointer
-						{isDragging ? 'border-gray-500 bg-gray-50' : 'border-gray-300 bg-white hover:border-gray-400'}"
-					role="button"
-					tabindex="0"
-					ondrop={onDrop}
-					ondragover={onDragOver}
-					ondragleave={onDragLeave}
-					onclick={() => document.getElementById('pptx-input')?.click()}
-					onkeydown={(e) => {
-						if (e.key === 'Enter') document.getElementById('pptx-input')?.click();
-					}}
-				>
-					{#if isLoading}
-						<p class="text-sm text-gray-500">
-							<span class="animate-blink">_</span> extracting styles...
-						</p>
-					{:else}
-						<p class="text-sm text-gray-700 mb-1">
-							{isDragging
-								? 'Drop .pptx files here'
-								: customTemplates.length > 0
-									? `Drop .pptx or click to extract styles (${customTemplates.length} templates)`
-									: 'Drop .pptx or click to extract styles'}
-						</p>
-						<p class="text-xs text-gray-400">.pptx (PowerPoint)</p>
-					{/if}
-					<input
-						id="pptx-input"
-						type="file"
-						accept=".pptx"
-						multiple
-						class="hidden"
-						onchange={onInputChange}
-					/>
-				</div>
-
-				<!-- Error state -->
-				{#if errorMsg}
-					<div class="t-card p-3 space-y-2">
-						<p class="text-xs text-red-600">[error] {errorMsg}</p>
-						<div class="flex gap-2">
-							<button class="t-btn text-xs" onclick={onSwitchToPresets}>[switch to presets]</button>
-							<button class="t-btn text-xs" onclick={handleCreateScratch}
-								>[build from scratch]</button
-							>
-						</div>
-					</div>
+			<!-- Drop zone -->
+			<div
+				class="border border-dashed py-24 px-8 text-center transition-colors cursor-pointer
+					{isDragging ? 'border-gray-500 bg-gray-50' : 'border-gray-300 bg-white hover:border-gray-400'}"
+				role="button"
+				tabindex="0"
+				ondrop={onDrop}
+				ondragover={onDragOver}
+				ondragleave={onDragLeave}
+				onclick={() => document.getElementById('pptx-input')?.click()}
+				onkeydown={(e) => {
+					if (e.key === 'Enter') document.getElementById('pptx-input')?.click();
+				}}
+			>
+				{#if isLoading}
+					<p class="text-sm text-gray-500">
+						<span class="animate-blink">_</span> extracting styles...
+					</p>
+				{:else}
+					<p class="text-sm text-gray-700 mb-1">
+						{isDragging
+							? 'Drop .pptx files here'
+							: customTemplates.length > 0
+								? `Drop .pptx or click to extract styles (${customTemplates.length} templates)`
+								: 'Drop .pptx or click to extract styles'}
+					</p>
+					<p class="text-xs text-gray-400">.pptx (PowerPoint)</p>
 				{/if}
-
-				<!-- Build from scratch -->
-				<button class="t-btn text-xs" onclick={handleCreateScratch}> [create new template] </button>
+				<input
+					id="pptx-input"
+					type="file"
+					accept=".pptx"
+					multiple
+					class="hidden"
+					onchange={onInputChange}
+				/>
 			</div>
-		{/if}
+
+			<!-- Error state -->
+			{#if errorMsg}
+				<div class="t-card p-3 space-y-2">
+					<p class="text-xs text-red-600">[error] {errorMsg}</p>
+					<div class="flex gap-2">
+						<button class="t-btn text-xs" onclick={onSwitchToPresets}>[switch to presets]</button>
+						<button class="t-btn text-xs" onclick={handleCreateScratch}>[build from scratch]</button
+						>
+					</div>
+				</div>
+			{/if}
+
+			<!-- Build from scratch (에디터 닫혀있을 때만) -->
+			{#if editorMode === 'none'}
+				<button class="t-btn text-xs" onclick={handleCreateScratch}> [create new template] </button>
+			{/if}
+		</div>
 
 		<!-- ═══ Section 3: Editor ═══ -->
 		{#if editorMode !== 'none' && editorTemplate}
