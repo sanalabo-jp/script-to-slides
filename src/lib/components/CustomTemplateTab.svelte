@@ -223,7 +223,7 @@
 
 				<!-- Drop zone -->
 				<div
-					class="border border-dashed py-12 px-4 text-center transition-colors cursor-pointer
+					class="border border-dashed py-24 px-8 text-center transition-colors cursor-pointer
 						{isDragging ? 'border-gray-500 bg-gray-50' : 'border-gray-300 bg-white hover:border-gray-400'}"
 					role="button"
 					tabindex="0"

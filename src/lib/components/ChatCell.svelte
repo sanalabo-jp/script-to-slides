@@ -131,13 +131,13 @@
 			<!-- Action buttons -->
 			<div class="flex gap-1 items-center {justifyAlign} mt-1.5">
 				<button
-					class="text-[10px] font-bold text-gray-900 hover:text-gray-600 cursor-pointer"
-					onclick={startEdit}>[edit]</button
+					class="text-[10px] font-bold text-gray-900 hover:text-red-600 cursor-pointer"
+					onclick={() => onDelete(message.id)}>[del]</button
 				>
 				<span class="text-[10px] text-gray-900">/</span>
 				<button
-					class="text-[10px] font-bold text-gray-900 hover:text-red-600 cursor-pointer"
-					onclick={() => onDelete(message.id)}>[del]</button
+					class="text-[10px] font-bold text-gray-900 hover:text-gray-600 cursor-pointer"
+					onclick={startEdit}>[edit]</button
 				>
 			</div>
 		{/if}
