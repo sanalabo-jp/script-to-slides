@@ -5,7 +5,7 @@
 - **대본 형식**: `name[role]: (description) dialogue` — 각 줄이 1개 슬라이드
 - **배포 URL**: https://script-to-slides-five.vercel.app
 - **GitHub**: sanalabo-jp/script-to-slides
-- **현재 버전**: v1.0.0
+- **현재 버전**: v1.0.1
 
 ## 브랜치 전략
 - **main**: 안정 릴리스 브랜치. feature/fix 브랜치의 머지 대상
@@ -56,8 +56,8 @@ src/
 │   │   └── visualMapper.ts       # AI 시각요소 → pptxgenjs shapes (safeColor 포함)
 │   ├── parser/
 │   │   ├── scriptParser.ts       # 대본 텍스트 파싱 (name[role]: (desc) dialogue)
-│   │   ├── pptxTemplateParser.ts # .pptx → SlideTemplate 추출 (JSZip + DOMParser)
-│   │   └── pptxTemplateUtils.ts  # 파서 순수 함수 + 타입 (lightenColor, mergeStyles, buildTemplate 등)
+│   │   ├── pptxTemplateParser.ts # .pptx → SlideTemplate 추출 (JSZip + DOMParser, 색상 modifier + gradient fallback)
+│   │   └── pptxTemplateUtils.ts  # 파서 순수 함수 + 타입 (색상 modifier, HSL 변환, mergeStyles, buildTemplate 등)
 │   ├── templates/
 │   │   └── templateUtils.ts      # 템플릿 유틸 (deriveCallout2, createBlankCustomTemplate, resolveUniqueName, FONT_FAMILY_PRESETS)
 │   ├── types/
@@ -71,14 +71,14 @@ src/
 │       ├── ManualInputMode.svelte # 채팅 입력 메인 래퍼
 │       ├── FrontMatterForm.svelte # 프론트매터 설정 (type, topic, categories)
 │       ├── ChatInputArea.svelte  # 대사 입력 폼 + 화자 선택
-│       ├── ChatCell.svelte       # 메시지 셀 (편집/삭제, 좌우 정렬)
+│       ├── ChatCell.svelte       # 메시지 셀 (편집/삭제, 좌우 정렬, field-sizing: content 동적 크기)
 │       ├── SpeakerSelector.svelte  # 화자 드롭다운 (추가/제거/선택)
 │       ├── MetadataModal.svelte   # 행 메타데이터 key-value 편집 모달
 │       ├── TemplateSelector.svelte # 프리셋 탭 (프리셋 목록 + tooltip)
-│       ├── CustomTemplateTab.svelte # 커스텀 탭 (템플릿 리스트 + 추출/생성 + 에디터)
-│       ├── TemplatePreviewCard.svelte # 재사용 4:3 미리보기 카드 (title bold truncate, desc truncate 1줄, [*] title 인라인)
+│       ├── CustomTemplateTab.svelte # 커스텀 탭 (다중 파일 업로드 + 자동 저장 + 템플릿 리스트 + 에디터)
+│       ├── TemplatePreviewCard.svelte # 재사용 4:3 미리보기 카드 (항상 border-2, title bold truncate, desc truncate 1줄, [*] 인라인)
 │       ├── TemplateEditor.svelte  # 인라인 폼 (name/desc/폰트/색상/굵기 + callout2 자동파생)
-│       └── TemplateTooltip.svelte # hover 시 floating 상세 미리보기
+│       └── TemplateTooltip.svelte # hover 시 floating 상세 미리보기 (항상 마운트, visible && template으로 제어)
 ├── routes/
 │   ├── +page.svelte              # 메인 페이지 (4단계 UI, File/Manual 탭 토글)
 │   ├── +layout.svelte            # 레이아웃
@@ -93,12 +93,22 @@ src/
 - 탭/조건부 컴포넌트 상태 보존: `{#if}` 대신 `class:hidden` 사용 (destroy/recreate 방지)
 - TemplateEditor의 `initialTemplate` prop은 `$state.snapshot`으로 unwrap 후 `structuredClone`으로 독립 복사
 
+## CSS/레이아웃 주의사항
+- **border-width 변경 → 레이아웃 시프트**: 선택/비선택 전환 시 border-width 고정, color만 변경
+- **`field-sizing: content`**: 폼 요소 크기를 값에 맞춰 자동 조절 (Chrome 123+, Edge 123+, Firefox/Safari 미지원)
+- **`w-fit` + `<input>` 기본 크기**: `<input type="text">`는 default `size=20` (~150px). `w-fit` 부모 안에서 `w-full` 사용 시 순환 참조 → 브라우저가 intrinsic size 사용 → 의도치 않은 확장
+- **`flex flex-col` + `align-items: stretch`**: `w-full` 없이도 부모 너비를 채우면서, intrinsic sizing에서는 각 자식의 max-content 기반으로 크기 결정
+- **`h-full` + CSS Grid**: grid cell 안에 여러 요소가 있을 때 `h-full`이 전체 cell 높이로 확장 → 의도치 않은 크기 증가
+- **flex 내 `truncate`**: flex 자식에 `min-w-0` 필수 (기본 `min-width: auto`가 overflow 방지)
+
 ## CustomTemplateTab 구조 (현재)
 - **customTemplates[]**: 사용자 생성/추출 템플릿 리스트 (컴포넌트 내부 상태, hidden으로 탭 전환 시 보존)
 - **Section 1**: Your Templates — grid-cols-3 + [del]/[edit] 버튼 (right-align, `/` 구분자), radio group 선택
-- **Section 2**: Add New — drop zone py-24 px-8 (.pptx 추출) + [create new template] (editorMode === 'none'일 때만)
+- **Section 2**: Add New — drop zone py-24 px-8 (.pptx 다중 파일 추출, `multiple` 지원) + [create new template] (editorMode === 'none'일 때만)
 - **Section 3**: Editor — 에디터 폼 + 라이브 프리뷰, [cancel] + [add this template]/[update template]
 - **EditorMode**: 'none' | 'new-extract' | 'new-scratch' | 'edit'
+- **다중 파일 업로드**: `handleFiles()` — 완전 추출(`isPartial=false`) → 자동 리스트 추가, 부분 추출(`isPartial=true`) → 에디터 열기
+- **에디터 자동 저장**: `autoSaveEditorIfNeeded()` — 새 추출 시작 전 에디터에 미저장 내용이 있으면 자동 저장
 - **중복 이름 처리**: `resolveUniqueName(name, existingNames)` → 자동 _1, _2 접미사
 - **PPTX 다운로드 파일명**: `template.name` (공백 → `_`)
 
@@ -165,7 +175,7 @@ src/
 
 ### 기능 1: 슬라이드쇼 템플릿 지정 옵션
 - Phase 1 완료: 렌더러 비종속 추상 템플릿 프로토콜 + 기본 프리셋 3종
-- Phase 2 완료: .pptx 업로드 → JSZip+OpenXML 파서로 스타일 추출 → SlideTemplate 변환 (graceful degradation)
+- Phase 2 완료: .pptx 업로드 → JSZip+OpenXML 파서로 스타일 추출 → SlideTemplate 변환 (graceful degradation, 색상 modifier 지원, gradient fallback)
 - Phase 3 완료: 커스텀 템플릿 빌더 (템플릿 리스트 + edit/delete + radio group + TemplateEditor)
 - Phase 4: AI 기반 템플릿 추천 (기능5 이후)
 
@@ -203,3 +213,8 @@ src/
 10. Custom 탭 카드가 Preset 탭보다 큼 → h-full 제거 (grid cell 내 [del]/[edit] 포함 시 확장 문제)
 11. ChatCell 버튼 순서 불일치 → [del]/[edit] 순서로 통일
 12. Custom 드롭존 크기 부족 → FileUpload와 동일 py-24 px-8
+13. TemplatePreviewCard border 선택 시 레이아웃 시프트 → 항상 border-2 유지 (color만 변경)
+14. 툴팁 DOM 삽입/제거 → 항상 마운트 + visible && template 조건으로 제어
+15. 파서 색상 modifier 미지원 → applyColorModifiers (tint/shade/lumMod/lumOff/satMod/satOff)
+16. 단일 파일만 업로드 가능 + 에디터 미저장 소실 → handleFiles 다중 파일 + autoSaveEditorIfNeeded
+17. ChatCell 편집 모드 너비 고정 → editWidth 제거, field-sizing: content, flex flex-col
