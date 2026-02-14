@@ -11,7 +11,7 @@
 - **main**: 안정 릴리스 브랜치. feature/fix 브랜치의 머지 대상
 - **feature/\***, **fix/\***: main에서 분기, 작업 완료 후 main에 --no-ff 병합
 - **dev**: 사용 종료 (beta 기간 한정 사용)
-- **태그**: v1.0.0 (현재)
+- **태그**: v1.0.0, v1.0.1 (현재)
 
 ## 기술 스택
 - **프레임워크**: SvelteKit 5 + Svelte 5 (runes: $state, $derived, $props) + TypeScript
@@ -197,6 +197,7 @@ src/
 | feature/ui-terminal-style | macOS Terminal 스타일 UI 리디자인 | `1c1df9a` |
 | feature/upload-ux-improve | 드롭존 확대, 가이드 접힘 기본값, 주의 애니메이션 | `ce9214a` |
 | feature/manual-chat-input | 채팅 스타일 수동 대본 입력 모드 | `1849ff3` |
+| feature/pptx-template-extract | 기능1 Phase 2+3 — .pptx 추출 + 커스텀 빌더 + 버그 수정 | `da6184c` |
 
 ## 해결된 주요 버그들 (beta-0.0.1)
 1. vercel.json functions 패턴 오류 → functions 키 제거
@@ -218,3 +219,7 @@ src/
 15. 파서 색상 modifier 미지원 → applyColorModifiers (tint/shade/lumMod/lumOff/satMod/satOff)
 16. 단일 파일만 업로드 가능 + 에디터 미저장 소실 → handleFiles 다중 파일 + autoSaveEditorIfNeeded
 17. ChatCell 편집 모드 너비 고정 → editWidth 제거, field-sizing: content, flex flex-col
+
+## 해결된 버그들 (v1.0.2 UX)
+18. 템플릿 삭제 시 잔존 툴팁 → handleDeleteTemplate()에서 명시적 tooltip 리셋 ({#each} DOM 즉시 제거로 onmouseleave 미발생)
+19. 탭 전환 시 이전 선택 잔존 → selectedTemplate null 초기화 (Presets↔Custom 전환 시 Generate 버튼 부적절 활성화 방지)
