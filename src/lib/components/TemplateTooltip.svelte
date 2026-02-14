@@ -7,7 +7,7 @@
 		x,
 		y
 	}: {
-		template: SlideTemplate;
+		template: SlideTemplate | null;
 		visible: boolean;
 		x: number;
 		y: number;
@@ -31,7 +31,7 @@
 	];
 </script>
 
-{#if visible}
+{#if visible && template}
 	<div
 		class="fixed z-50 pointer-events-none"
 		style="left: {x + OFFSET_X}px; top: {y + OFFSET_Y}px;"

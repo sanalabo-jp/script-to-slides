@@ -343,6 +343,4 @@
 	</div>
 </div>
 
-{#if tooltipTemplate}
-	<TemplateTooltip template={tooltipTemplate} visible={tooltipVisible} x={tooltipX} y={tooltipY} />
-{/if}
+<TemplateTooltip template={tooltipTemplate} visible={tooltipVisible} x={tooltipX} y={tooltipY} />
