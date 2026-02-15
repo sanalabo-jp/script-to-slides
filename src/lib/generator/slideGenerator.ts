@@ -127,6 +127,7 @@ function addContentSlide(pptx: PptxGenJS, data: SlideData, template: SlideTempla
 	const sorted = [...template.elements].sort((a, b) => a.layout.zIndex - b.layout.zIndex);
 
 	for (const el of sorted) {
+		if (el.enabled === false) continue;
 		switch (el.name) {
 			case 'callout1':
 				renderCallout1(slide, el, data);

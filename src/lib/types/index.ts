@@ -87,6 +87,7 @@ export interface TemplateElement {
 	name: ElementName;
 	layout: ElementLayout;
 	styles: ElementFontStyle[]; // [0]=primary, [1]=secondary (optional)
+	enabled?: boolean; // undefined or true = enabled, false = hidden from slide
 }
 
 export interface SlideTemplate {
