@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { SlideTemplate } from '$lib/types';
+	import { findElement } from '$lib/templates/templateUtils';
 
 	let {
 		template,
@@ -12,6 +13,16 @@
 		onClick?: () => void;
 		class?: string;
 	} = $props();
+
+	const callout1Color = $derived(
+		findElement(template.elements, 'callout1')?.styles[0]?.fontColor ?? '#999999'
+	);
+	const titleColor = $derived(
+		findElement(template.elements, 'title')?.styles[0]?.fontColor ?? '#434343'
+	);
+	const bodyColor = $derived(
+		findElement(template.elements, 'body')?.styles[0]?.fontColor ?? '#434343'
+	);
 </script>
 
 <button
@@ -26,23 +37,11 @@
 		style="background-color: {template.background.color}"
 	>
 		<div class="w-4/5 space-y-1.5 p-2">
-			<div
-				class="h-1.5 w-3/5 opacity-60"
-				style="background-color: {template.styles.callout1Label.fontColor}"
-			></div>
-			<div
-				class="h-2.5 w-4/5"
-				style="background-color: {template.styles.titleLabel.fontColor}"
-			></div>
+			<div class="h-1.5 w-3/5 opacity-60" style="background-color: {callout1Color}"></div>
+			<div class="h-2.5 w-4/5" style="background-color: {titleColor}"></div>
 			<div class="space-y-1 pt-1">
-				<div
-					class="h-1.5 w-full opacity-40"
-					style="background-color: {template.styles.bodyLabel.fontColor}"
-				></div>
-				<div
-					class="h-1.5 w-3/4 opacity-40"
-					style="background-color: {template.styles.bodyLabel.fontColor}"
-				></div>
+				<div class="h-1.5 w-full opacity-40" style="background-color: {bodyColor}"></div>
+				<div class="h-1.5 w-3/4 opacity-40" style="background-color: {bodyColor}"></div>
 			</div>
 		</div>
 	</div>

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { SlideTemplate } from '$lib/types';
+	import type { SlideTemplate, ElementName } from '$lib/types';
 
 	let {
 		template,
@@ -22,12 +22,12 @@
 		return 'Regular';
 	}
 
-	const styleEntries = [
-		{ key: 'titleLabel' as const, label: 'title' },
-		{ key: 'bodyLabel' as const, label: 'body' },
-		{ key: 'callout1Label' as const, label: 'callout1' },
-		{ key: 'callout2Label' as const, label: 'callout2' },
-		{ key: 'captionLabel' as const, label: 'caption' }
+	const tooltipEntries: { name: ElementName; label: string }[] = [
+		{ name: 'callout1', label: 'callout1' },
+		{ name: 'callout2', label: 'callout2' },
+		{ name: 'title', label: 'title' },
+		{ name: 'body', label: 'body' },
+		{ name: 'caption', label: 'caption' }
 	];
 </script>
 
@@ -55,20 +55,23 @@
 
 			<!-- Style entries -->
 			<div class="space-y-1.5">
-				{#each styleEntries as { key, label }}
-					{@const s = template.styles[key]}
-					<div class="flex items-start gap-2">
-						<div
-							class="w-4 h-4 border border-gray-200 shrink-0 mt-0.5"
-							style="background-color: {s.fontColor}"
-						></div>
-						<div class="text-[10px] leading-tight">
-							<div class="text-gray-700 font-medium">{label}</div>
-							<div class="text-gray-400">
-								{s.fontFamily} / {s.fontSize}pt / {weightLabel(s.fontWeight)}
+				{#each tooltipEntries as { name, label }}
+					{@const el = template.elements.find((e) => e.name === name)}
+					{#if el && el.styles[0]}
+						{@const s = el.styles[0]}
+						<div class="flex items-start gap-2">
+							<div
+								class="w-4 h-4 border border-gray-200 shrink-0 mt-0.5"
+								style="background-color: {s.fontColor}"
+							></div>
+							<div class="text-[10px] leading-tight">
+								<div class="text-gray-700 font-medium">{label}</div>
+								<div class="text-gray-400">
+									{s.fontFamily} / {s.fontSize}pt / {weightLabel(s.fontWeight)}
+								</div>
 							</div>
 						</div>
-					</div>
+					{/if}
 				{/each}
 			</div>
 		</div>

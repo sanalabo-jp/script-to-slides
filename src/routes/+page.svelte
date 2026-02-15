@@ -50,7 +50,7 @@
 	}
 
 	function handleProceedToTemplate() {
-		step = 'template';
+		step = 'template-style';
 	}
 
 	async function handleGenerate() {
@@ -80,7 +80,7 @@
 			step = 'done';
 		} catch (err) {
 			errorMsg = `Generation failed: ${err instanceof Error ? err.message : 'Unknown error'}`;
-			step = 'template';
+			step = 'template-style';
 		} finally {
 			isLoading = false;
 		}
@@ -101,10 +101,11 @@
 	<!-- Step indicator -->
 	<div class="flex items-center gap-1.5 text-xs">
 		{#each ['Upload', 'Preview', 'Template', 'Generate'] as label, i}
-			{@const stepMap = {
+			{@const stepMap: Record<import('$lib/types').AppStep, number> = {
 				upload: 0,
 				preview: 1,
-				template: 2,
+				'template-style': 2,
+				'template-layout': 2,
 				analyzing: 3,
 				ready: 3,
 				generating: 3,
@@ -175,7 +176,7 @@
 	{/if}
 
 	<!-- Step 3: Template Selection -->
-	{#if step === 'template'}
+	{#if step === 'template-style'}
 		<!-- Template mode tabs -->
 		<div class="flex gap-0">
 			<button
