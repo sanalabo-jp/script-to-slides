@@ -52,11 +52,41 @@ export interface ParseResult {
 
 // === Slide Template Types ===
 
-export interface ElementStyle {
+export interface Position {
+	x: number; // inches
+	y: number; // inches
+}
+
+export interface Size {
+	w: number; // inches
+	h: number; // inches
+}
+
+export interface ElementLayout {
+	position: Position;
+	size: Size;
+	zIndex: number;
+}
+
+export interface ElementFontStyle {
 	fontFamily: string;
 	fontSize: number;
 	fontColor: string;
 	fontWeight: number;
+}
+
+export type ElementName =
+	| 'callout1' // metadata
+	| 'callout2' // speaker
+	| 'title' // summary
+	| 'body' // context
+	| 'image' // image (4:3)
+	| 'caption'; // detail
+
+export interface TemplateElement {
+	name: ElementName;
+	layout: ElementLayout;
+	styles: ElementFontStyle[]; // [0]=primary, [1]=secondary (optional)
 }
 
 export interface SlideTemplate {
@@ -67,14 +97,13 @@ export interface SlideTemplate {
 	background: {
 		color: string;
 	};
-	styles: {
-		callout1Label: ElementStyle;
-		callout2Label: ElementStyle;
-		titleLabel: ElementStyle;
-		bodyLabel: ElementStyle;
-		captionLabel: ElementStyle;
-	};
+	elements: TemplateElement[];
 }
+
+/**
+ * @deprecated Use ElementFontStyle instead. Retained for migration period.
+ */
+export type ElementStyle = ElementFontStyle;
 
 // === Gemini AI Analysis Types ===
 
@@ -149,7 +178,8 @@ export interface SpeakerProfile {
 export type AppStep =
 	| 'upload'
 	| 'preview'
-	| 'template'
+	| 'template-style'
+	| 'template-layout'
 	| 'analyzing'
 	| 'ready'
 	| 'generating'

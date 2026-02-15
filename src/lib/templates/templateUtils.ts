@@ -1,5 +1,6 @@
-import type { ElementStyle, SlideTemplate } from '$lib/types';
+import type { ElementFontStyle, ElementName, SlideTemplate, TemplateElement } from '$lib/types';
 import { lightenColor } from '$lib/parser/pptxTemplateUtils';
+import { LECTURE_LAYOUT } from './presets';
 
 // === Constants ===
 
@@ -22,12 +23,55 @@ export const FONT_WEIGHT_OPTIONS: { label: string; value: number }[] = [
 	{ label: 'Bold', value: 700 }
 ];
 
-// === Functions ===
+// === Element Helpers ===
 
 /**
- * Derive callout2 style from callout1 (fontSize -1pt, fontColor lightened).
+ * Find a TemplateElement by name from an elements array.
  */
-export function deriveCallout2(callout1: ElementStyle): ElementStyle {
+export function findElement(
+	elements: TemplateElement[],
+	name: ElementName
+): TemplateElement | undefined {
+	return elements.find((e) => e.name === name);
+}
+
+/**
+ * Get the primary font style of an element (styles[0]).
+ * Returns undefined if styles is empty.
+ */
+export function getPrimaryStyle(element: TemplateElement): ElementFontStyle | undefined {
+	return element.styles[0];
+}
+
+/**
+ * Get the secondary font style of an element (styles[1]).
+ * Returns undefined if not present.
+ */
+export function getSecondaryStyle(element: TemplateElement): ElementFontStyle | undefined {
+	return element.styles[1];
+}
+
+// === Style Derivation ===
+
+/**
+ * Derive a secondary font style from a primary style.
+ * Used for callout2 (speaker): name(primary) → role(secondary).
+ * - fontColor lightened by 30%
+ * - fontWeight lowered to medium (500) if bold, otherwise kept
+ */
+export function deriveSecondaryFontStyle(primary: ElementFontStyle): ElementFontStyle {
+	return {
+		fontFamily: primary.fontFamily,
+		fontSize: primary.fontSize,
+		fontColor: lightenColor(primary.fontColor, 0.3),
+		fontWeight: primary.fontWeight >= 700 ? 500 : primary.fontWeight
+	};
+}
+
+/**
+ * @deprecated Use deriveSecondaryFontStyle instead.
+ */
+export function deriveCallout2(callout1: ElementFontStyle): ElementFontStyle {
 	return {
 		fontFamily: callout1.fontFamily,
 		fontSize: Math.max(callout1.fontSize - 1, 7),
@@ -36,15 +80,17 @@ export function deriveCallout2(callout1: ElementStyle): ElementStyle {
 	};
 }
 
+// === Template Creation ===
+
 /**
- * Create a blank custom template with sensible defaults.
+ * Create a blank custom template with sensible defaults and Lecture layout.
  */
 export function createBlankCustomTemplate(): SlideTemplate {
-	const callout1Label: ElementStyle = {
+	const callout2Primary: ElementFontStyle = {
 		fontFamily: 'Noto Sans',
 		fontSize: 11,
-		fontColor: '#999999',
-		fontWeight: 400
+		fontColor: '#434343',
+		fontWeight: 700
 	};
 
 	return {
@@ -53,30 +99,42 @@ export function createBlankCustomTemplate(): SlideTemplate {
 		description: 'User-created custom template',
 		thumbnail: '',
 		background: { color: '#FFFFFF' },
-		styles: {
-			callout1Label,
-			callout2Label: deriveCallout2(callout1Label),
-			titleLabel: {
-				fontFamily: 'Noto Sans',
-				fontSize: 14,
-				fontColor: '#434343',
-				fontWeight: 700
+		elements: [
+			{
+				name: 'callout1',
+				layout: LECTURE_LAYOUT.callout1,
+				styles: [{ fontFamily: 'Noto Sans', fontSize: 10, fontColor: '#999999', fontWeight: 400 }]
 			},
-			bodyLabel: {
-				fontFamily: 'Noto Sans',
-				fontSize: 12,
-				fontColor: '#434343',
-				fontWeight: 500
+			{
+				name: 'callout2',
+				layout: LECTURE_LAYOUT.callout2,
+				styles: [callout2Primary, deriveSecondaryFontStyle(callout2Primary)]
 			},
-			captionLabel: {
-				fontFamily: 'Noto Sans',
-				fontSize: 9,
-				fontColor: '#C0C0C0',
-				fontWeight: 400
+			{
+				name: 'title',
+				layout: LECTURE_LAYOUT.title,
+				styles: [{ fontFamily: 'Noto Sans', fontSize: 14, fontColor: '#434343', fontWeight: 700 }]
+			},
+			{
+				name: 'body',
+				layout: LECTURE_LAYOUT.body,
+				styles: [{ fontFamily: 'Noto Sans', fontSize: 12, fontColor: '#434343', fontWeight: 500 }]
+			},
+			{
+				name: 'image',
+				layout: LECTURE_LAYOUT.image,
+				styles: []
+			},
+			{
+				name: 'caption',
+				layout: LECTURE_LAYOUT.caption,
+				styles: [{ fontFamily: 'Noto Sans', fontSize: 9, fontColor: '#C0C0C0', fontWeight: 400 }]
 			}
-		}
+		]
 	};
 }
+
+// === Validation ===
 
 /**
  * Validate a hex color string (#RGB or #RRGGBB).
@@ -87,8 +145,6 @@ export function isValidHexColor(hex: string): boolean {
 
 /**
  * Resolve duplicate template name by appending _1, _2, etc.
- * e.g. 'template' with existing ['template'] → 'template_1'
- * e.g. 'template_1' with existing ['template', 'template_1'] → 'template_1_1'
  */
 export function resolveUniqueName(name: string, existingNames: string[]): string {
 	if (!existingNames.includes(name)) return name;
