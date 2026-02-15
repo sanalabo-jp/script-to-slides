@@ -4,6 +4,7 @@
 	import ScriptPreview from '$lib/components/ScriptPreview.svelte';
 	import TemplateSelector from '$lib/components/TemplateSelector.svelte';
 	import CustomTemplateTab from '$lib/components/CustomTemplateTab.svelte';
+	import LayoutEditor from '$lib/components/LayoutEditor.svelte';
 	import { parseScript, readFileAsText } from '$lib/parser/scriptParser';
 	import type { AppStep, ParseResult, SlideTemplate } from '$lib/types';
 
@@ -253,11 +254,46 @@
 			>
 				[<span class="t-btn-label">&larr; back to preview</span>]
 			</button>
+			<div class="flex items-center gap-3">
+				<button
+					class="t-btn-text {!selectedTemplate ? 'opacity-40 cursor-not-allowed' : ''}"
+					onclick={() => {
+						step = 'template-layout';
+					}}
+					disabled={!selectedTemplate}
+				>
+					[<span class="t-btn-label">edit layout &rarr;</span>]
+				</button>
+				<button
+					class="t-btn {!selectedTemplate ? 'opacity-40 cursor-not-allowed' : ''}"
+					onclick={handleGenerate}
+					disabled={!selectedTemplate}
+				>
+					[<span class="underline">generate presentation</span>]
+				</button>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Step 3b: Layout Editor -->
+	{#if step === 'template-layout' && selectedTemplate}
+		<LayoutEditor
+			initialTemplate={selectedTemplate}
+			onChange={(t) => {
+				selectedTemplate = t;
+			}}
+		/>
+
+		<div class="flex items-center justify-between">
 			<button
-				class="t-btn {!selectedTemplate ? 'opacity-40 cursor-not-allowed' : ''}"
-				onclick={handleGenerate}
-				disabled={!selectedTemplate}
+				class="t-btn-text"
+				onclick={() => {
+					step = 'template-style';
+				}}
 			>
+				[<span class="t-btn-label">&larr; back to style</span>]
+			</button>
+			<button class="t-btn" onclick={handleGenerate}>
 				[<span class="underline">generate presentation</span>]
 			</button>
 		</div>
