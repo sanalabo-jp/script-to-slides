@@ -201,6 +201,9 @@ describe('mergeStyles', () => {
 // === buildTemplate ===
 
 describe('buildTemplate', () => {
+	const findEl = (result: ReturnType<typeof buildTemplate>, name: string) =>
+		result.elements.find((e) => e.name === name);
+
 	it('파일명에서 .pptx를 제거하여 name으로 사용한다', () => {
 		const styles: ExtractedStyles = { background: null, placeholders: [] };
 		const result = buildTemplate('my-template.pptx', styles, defaultTheme);
@@ -225,6 +228,31 @@ describe('buildTemplate', () => {
 		expect(result.background.color).toBe('#1A1A2E');
 	});
 
+	it('6개의 elements를 생성한다', () => {
+		const styles: ExtractedStyles = { background: null, placeholders: [] };
+		const result = buildTemplate('test.pptx', styles, defaultTheme);
+		expect(result.elements).toHaveLength(6);
+		const names = result.elements.map((e) => e.name);
+		expect(names).toContain('callout1');
+		expect(names).toContain('callout2');
+		expect(names).toContain('title');
+		expect(names).toContain('body');
+		expect(names).toContain('image');
+		expect(names).toContain('caption');
+	});
+
+	it('각 element에 layout 정보가 있다', () => {
+		const styles: ExtractedStyles = { background: null, placeholders: [] };
+		const result = buildTemplate('test.pptx', styles, defaultTheme);
+		for (const el of result.elements) {
+			expect(el.layout.position.x).toBeGreaterThanOrEqual(0);
+			expect(el.layout.position.y).toBeGreaterThanOrEqual(0);
+			expect(el.layout.size.w).toBeGreaterThan(0);
+			expect(el.layout.size.h).toBeGreaterThan(0);
+			expect(typeof el.layout.zIndex).toBe('number');
+		}
+	});
+
 	it('placeholder type 기반으로 스타일을 매핑한다', () => {
 		const styles: ExtractedStyles = {
 			background: null,
@@ -236,22 +264,29 @@ describe('buildTemplate', () => {
 			]
 		};
 		const result = buildTemplate('test.pptx', styles, defaultTheme);
-		expect(result.styles.titleLabel.fontSize).toBe(28);
-		expect(result.styles.bodyLabel.fontSize).toBe(16);
-		expect(result.styles.callout1Label.fontSize).toBe(12);
-		expect(result.styles.captionLabel.fontSize).toBe(8);
+		expect(findEl(result, 'title')!.styles[0].fontSize).toBe(28);
+		expect(findEl(result, 'body')!.styles[0].fontSize).toBe(16);
+		expect(findEl(result, 'callout1')!.styles[0].fontSize).toBe(12);
+		expect(findEl(result, 'caption')!.styles[0].fontSize).toBe(8);
 	});
 
-	it('callout2Label은 callout1에서 파생된다 (fontSize -1, fontColor 밝게)', () => {
+	it('callout2에 primary + secondary 듀얼 스타일이 있다', () => {
 		const styles: ExtractedStyles = {
 			background: null,
 			placeholders: [{ type: 'subTitle', fontSize: 11, fontColor: '#999999' }]
 		};
 		const result = buildTemplate('test.pptx', styles, defaultTheme);
-		expect(result.styles.callout2Label.fontSize).toBe(10);
-		expect(result.styles.callout2Label.fontFamily).toBe(result.styles.callout1Label.fontFamily);
-		// lightened color should be different from callout1
-		expect(result.styles.callout2Label.fontColor).not.toBe(result.styles.callout1Label.fontColor);
+		const callout2 = findEl(result, 'callout2')!;
+		expect(callout2.styles).toHaveLength(2);
+		expect(callout2.styles[0].fontWeight).toBe(700); // primary (name): bold
+		// secondary (role): derived, lighter color
+		expect(callout2.styles[1].fontColor).not.toBe(callout2.styles[0].fontColor);
+	});
+
+	it('image element는 styles가 비어있다', () => {
+		const styles: ExtractedStyles = { background: null, placeholders: [] };
+		const result = buildTemplate('test.pptx', styles, defaultTheme);
+		expect(findEl(result, 'image')!.styles).toHaveLength(0);
 	});
 });
 

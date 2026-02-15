@@ -1,4 +1,6 @@
-import type { SlideTemplate, ElementStyle } from '$lib/types';
+import type { SlideTemplate, ElementFontStyle } from '$lib/types';
+import { LECTURE_LAYOUT } from '$lib/templates/presets';
+import { deriveSecondaryFontStyle } from '$lib/templates/templateUtils';
 
 // === Constants ===
 
@@ -229,13 +231,13 @@ export function resolveFont(typeface: string, theme: ThemeData): string {
 }
 
 /**
- * Convert a PlaceholderStyle to an ElementStyle, applying defaults.
+ * Convert a PlaceholderStyle to an ElementFontStyle, applying defaults.
  */
 export function phToElementStyle(
 	ph: PlaceholderStyle | undefined,
 	defaults: { fontSize: number; fontColor: string; fontWeight: number },
 	theme: ThemeData
-): ElementStyle {
+): ElementFontStyle {
 	if (!ph) {
 		return {
 			fontFamily: theme.minorFont || DEFAULT_FONT,
@@ -282,6 +284,7 @@ export function mergeStyles(master: ExtractedStyles, layouts: ExtractedStyles): 
 
 /**
  * Build a SlideTemplate from extracted styles and theme data.
+ * Returns new elements-array structure with LECTURE_LAYOUT positions.
  */
 export function buildTemplate(
 	fileName: string,
@@ -303,37 +306,45 @@ export function buildTemplate(
 	const allPhs = styles.placeholders.filter((p) => p.fontSize !== undefined);
 	allPhs.sort((a, b) => (b.fontSize || 0) - (a.fontSize || 0));
 
-	const titleLabel = phToElementStyle(
+	// callout1 (metadata): subtitle에서 추출, 폴백 allPhs[2]
+	const callout1Style = phToElementStyle(
+		subtitlePh || allPhs[2],
+		{ fontSize: 10, fontColor: '#999999', fontWeight: 400 },
+		theme
+	);
+
+	// callout2 (speaker): callout1 기반으로 파생. primary=name(bold), secondary=role(derived)
+	const callout2Primary: ElementFontStyle = {
+		fontFamily: callout1Style.fontFamily,
+		fontSize: Math.max(callout1Style.fontSize + 1, 11),
+		fontColor: phToElementStyle(
+			titlePh || allPhs[0],
+			{ fontSize: 14, fontColor: DEFAULT_COLOR, fontWeight: 700 },
+			theme
+		).fontColor,
+		fontWeight: 700
+	};
+
+	// title (summary)
+	const titleStyle = phToElementStyle(
 		titlePh || allPhs[0],
 		{ fontSize: 14, fontColor: DEFAULT_COLOR, fontWeight: 700 },
 		theme
 	);
 
-	const bodyLabel = phToElementStyle(
+	// body (context)
+	const bodyStyle = phToElementStyle(
 		bodyPh || allPhs[1],
 		{ fontSize: 12, fontColor: DEFAULT_COLOR, fontWeight: 500 },
 		theme
 	);
 
-	const callout1Label = phToElementStyle(
-		subtitlePh || allPhs[2],
-		{ fontSize: 11, fontColor: '#999999', fontWeight: 400 },
-		theme
-	);
-
-	const captionLabel = phToElementStyle(
+	// caption (detail)
+	const captionStyle = phToElementStyle(
 		captionPh || allPhs[allPhs.length - 1],
 		{ fontSize: 9, fontColor: '#C0C0C0', fontWeight: 400 },
 		theme
 	);
-
-	// callout2Label: callout1에서 파생 (fontSize -1pt, fontColor 밝게)
-	const callout2Label: ElementStyle = {
-		fontFamily: callout1Label.fontFamily,
-		fontSize: Math.max(callout1Label.fontSize - 1, 7),
-		fontColor: lightenColor(callout1Label.fontColor, 0.3),
-		fontWeight: callout1Label.fontWeight
-	};
 
 	const bgColor = styles.background || '#FFFFFF';
 	const baseName = fileName.replace(/\.pptx$/i, '');
@@ -344,12 +355,17 @@ export function buildTemplate(
 		description: `.pptx에서 추출된 커스텀 템플릿`,
 		thumbnail: '',
 		background: { color: bgColor },
-		styles: {
-			callout1Label,
-			callout2Label,
-			titleLabel,
-			bodyLabel,
-			captionLabel
-		}
+		elements: [
+			{ name: 'callout1', layout: LECTURE_LAYOUT.callout1, styles: [callout1Style] },
+			{
+				name: 'callout2',
+				layout: LECTURE_LAYOUT.callout2,
+				styles: [callout2Primary, deriveSecondaryFontStyle(callout2Primary)]
+			},
+			{ name: 'title', layout: LECTURE_LAYOUT.title, styles: [titleStyle] },
+			{ name: 'body', layout: LECTURE_LAYOUT.body, styles: [bodyStyle] },
+			{ name: 'image', layout: LECTURE_LAYOUT.image, styles: [] },
+			{ name: 'caption', layout: LECTURE_LAYOUT.caption, styles: [captionStyle] }
+		]
 	};
 }
