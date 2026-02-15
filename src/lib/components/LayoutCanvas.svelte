@@ -2,10 +2,13 @@
 	import type { TemplateElement, ElementName, ElementLayout } from '$lib/types';
 	import {
 		SLIDE_WIDTH,
+		SLIDE_HEIGHT,
 		ELEMENT_COLORS,
+		MIN_ELEMENT_SIZE,
 		toPixel,
 		toInch,
 		clampPosition,
+		clampSize,
 		snapToGrid,
 		DEFAULT_GRID_SIZE
 	} from '$lib/templates/layoutUtils';
@@ -28,14 +31,42 @@
 
 	// --- Drag state ---
 
+	type ResizeHandle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
+
 	type DragState = {
-		mode: 'move';
+		mode: 'move' | 'resize';
 		elementName: ElementName;
+		resizeHandle?: ResizeHandle;
 		startPointer: { x: number; y: number };
 		startLayout: ElementLayout;
 	};
 
 	let dragState: DragState | null = $state(null);
+
+	const HANDLE_SIZE = 8; // px
+	const RESIZE_HANDLES: { handle: ResizeHandle; cursor: string }[] = [
+		{ handle: 'nw', cursor: 'nwse-resize' },
+		{ handle: 'n', cursor: 'ns-resize' },
+		{ handle: 'ne', cursor: 'nesw-resize' },
+		{ handle: 'w', cursor: 'ew-resize' },
+		{ handle: 'e', cursor: 'ew-resize' },
+		{ handle: 'sw', cursor: 'nesw-resize' },
+		{ handle: 's', cursor: 'ns-resize' },
+		{ handle: 'se', cursor: 'nwse-resize' }
+	];
+
+	function handleStyle(handle: ResizeHandle, width: number, height: number): string {
+		const half = HANDLE_SIZE / 2;
+		let left = 0;
+		let top = 0;
+		if (handle.includes('w')) left = -half;
+		else if (handle.includes('e')) left = width - half;
+		else left = width / 2 - half;
+		if (handle.includes('n')) top = -half;
+		else if (handle.includes('s')) top = height - half;
+		else top = height / 2 - half;
+		return `left:${left}px;top:${top}px;width:${HANDLE_SIZE}px;height:${HANDLE_SIZE}px;`;
+	}
 
 	$effect(() => {
 		if (!canvasEl) return;
@@ -58,6 +89,10 @@
 
 	function findElement(name: ElementName): TemplateElement | undefined {
 		return elements.find((el) => el.name === name);
+	}
+
+	function maybeSnap(value: number): number {
+		return snapEnabled ? snapToGrid(value, DEFAULT_GRID_SIZE) : value;
 	}
 
 	// --- Drag: Move ---
@@ -85,36 +120,93 @@
 		};
 	}
 
+	// --- Drag: Resize ---
+
+	function handleResizeDown(e: PointerEvent, name: ElementName, handle: ResizeHandle) {
+		e.stopPropagation();
+		e.preventDefault();
+
+		const el = findElement(name);
+		if (!el) return;
+
+		const target = e.currentTarget as HTMLElement;
+		target.setPointerCapture(e.pointerId);
+
+		dragState = {
+			mode: 'resize',
+			elementName: name,
+			resizeHandle: handle,
+			startPointer: { x: e.clientX, y: e.clientY },
+			startLayout: {
+				position: { ...el.layout.position },
+				size: { ...el.layout.size },
+				zIndex: el.layout.zIndex
+			}
+		};
+	}
+
 	function handlePointerMove(e: PointerEvent) {
 		if (!dragState || scale === 0) return;
 
-		const dx = e.clientX - dragState.startPointer.x;
-		const dy = e.clientY - dragState.startPointer.y;
-
-		const dxInch = toInch(dx, scale);
-		const dyInch = toInch(dy, scale);
+		const dxInch = toInch(e.clientX - dragState.startPointer.x, scale);
+		const dyInch = toInch(e.clientY - dragState.startPointer.y, scale);
 
 		const el = findElement(dragState.elementName);
 		if (!el) return;
 
-		let newX = dragState.startLayout.position.x + dxInch;
-		let newY = dragState.startLayout.position.y + dyInch;
+		if (dragState.mode === 'move') {
+			const newX = maybeSnap(dragState.startLayout.position.x + dxInch);
+			const newY = maybeSnap(dragState.startLayout.position.y + dyInch);
+			const clamped = clampPosition(newX, newY, el.layout.size.w, el.layout.size.h);
 
-		if (snapEnabled) {
-			newX = snapToGrid(newX, DEFAULT_GRID_SIZE);
-			newY = snapToGrid(newY, DEFAULT_GRID_SIZE);
-		}
+			onUpdateElement(dragState.elementName, {
+				...el,
+				layout: { ...el.layout, position: clamped }
+			});
+		} else if (dragState.mode === 'resize' && dragState.resizeHandle) {
+			const h = dragState.resizeHandle;
+			const sl = dragState.startLayout;
+			const minSize = MIN_ELEMENT_SIZE[dragState.elementName];
 
-		const clamped = clampPosition(newX, newY, el.layout.size.w, el.layout.size.h);
+			let x = sl.position.x;
+			let y = sl.position.y;
+			let w = sl.size.w;
+			let hh = sl.size.h;
 
-		const updated: TemplateElement = {
-			...el,
-			layout: {
-				...el.layout,
-				position: clamped
+			// Horizontal
+			if (h.includes('e')) {
+				w = maybeSnap(sl.size.w + dxInch);
+			} else if (h.includes('w')) {
+				const newW = sl.size.w - dxInch;
+				w = maybeSnap(newW);
+				x = maybeSnap(sl.position.x + (sl.size.w - w));
 			}
-		};
-		onUpdateElement(dragState.elementName, updated);
+
+			// Vertical
+			if (h.includes('s')) {
+				hh = maybeSnap(sl.size.h + dyInch);
+			} else if (h.includes('n')) {
+				const newH = sl.size.h - dyInch;
+				hh = maybeSnap(newH);
+				y = maybeSnap(sl.position.y + (sl.size.h - hh));
+			}
+
+			// Apply constraints
+			const cSize = clampSize(w, hh, minSize.w, minSize.h);
+			// Recalculate position if size was clamped (for n/w handles)
+			if (h.includes('w') && cSize.w !== w) {
+				x = sl.position.x + sl.size.w - cSize.w;
+			}
+			if (h.includes('n') && cSize.h !== hh) {
+				y = sl.position.y + sl.size.h - cSize.h;
+			}
+			const cPos = clampPosition(x, y, cSize.w, cSize.h);
+
+			onUpdateElement(dragState.elementName, {
+				...el,
+				layout: { ...el.layout, position: cPos, size: cSize }
+			});
+		}
 	}
 
 	function handlePointerUp(e: PointerEvent) {
@@ -148,7 +240,7 @@
 					background:{color}20;
 					border:{isSelected ? '2px solid' : '1px dashed'} {color};
 					z-index:{el.layout.zIndex};
-					cursor:move;"
+					cursor:{dragState?.mode === 'resize' ? 'auto' : 'move'};"
 				onpointerdown={(e) => handlePointerDown(e, el.name)}
 			>
 				<span
@@ -157,6 +249,17 @@
 				>
 					{el.name}
 				</span>
+
+				{#if isSelected}
+					{#each RESIZE_HANDLES as { handle, cursor }}
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<div
+							class="absolute bg-white border border-gray-500"
+							style="{handleStyle(handle, width, height)}cursor:{cursor};z-index:999;"
+							onpointerdown={(e) => handleResizeDown(e, el.name, handle)}
+						></div>
+					{/each}
+				{/if}
 			</div>
 		{/each}
 	{/if}
