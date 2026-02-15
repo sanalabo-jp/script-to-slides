@@ -31,6 +31,9 @@ npm-debug.log*
 # Sample / test assets
 sample/
 
+# Dev scripts
+scripts/
+
 # Coverage
 coverage/
 
