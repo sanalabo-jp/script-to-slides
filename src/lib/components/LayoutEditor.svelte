@@ -73,7 +73,11 @@
 
 		<!-- Right: Property Panel -->
 		<div class="w-44 shrink-0">
-			<LayoutPropertyPanel element={selectedEl} onUpdateElement={handleUpdateElement} />
+			<LayoutPropertyPanel
+				element={selectedEl}
+				elementCount={template.elements.length}
+				onUpdateElement={handleUpdateElement}
+			/>
 		</div>
 	</div>
 </div>

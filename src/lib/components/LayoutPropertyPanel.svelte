@@ -10,23 +10,27 @@
 
 	interface Props {
 		element: TemplateElement | null;
+		elementCount: number;
 		onUpdateElement: (name: ElementName, element: TemplateElement) => void;
 	}
 
-	let { element, onUpdateElement }: Props = $props();
+	let { element, elementCount, onUpdateElement }: Props = $props();
 
-	function updatePosition(axis: 'x' | 'y', value: number) {
-		if (!element) return;
+	let maxZIndex = $derived(Math.max(1, elementCount));
+
+	function updatePosition(axis: 'x' | 'y', value: number): number {
+		if (!element) return value;
 		const pos = { ...element.layout.position, [axis]: value };
 		const clamped = clampPosition(pos.x, pos.y, element.layout.size.w, element.layout.size.h);
 		onUpdateElement(element.name, {
 			...element,
 			layout: { ...element.layout, position: clamped }
 		});
+		return axis === 'x' ? clamped.x : clamped.y;
 	}
 
-	function updateSize(axis: 'w' | 'h', value: number) {
-		if (!element) return;
+	function updateSize(axis: 'w' | 'h', value: number): number {
+		if (!element) return value;
 		const minSize = MIN_ELEMENT_SIZE[element.name];
 		const size = { ...element.layout.size, [axis]: value };
 		const clamped = clampSize(size.w, size.h, minSize.w, minSize.h);
@@ -40,15 +44,27 @@
 			...element,
 			layout: { ...element.layout, position: pos, size: clamped }
 		});
+		return axis === 'w' ? clamped.w : clamped.h;
 	}
 
-	function updateZIndex(value: number) {
-		if (!element) return;
-		const z = Math.max(0, Math.min(10, Math.round(value)));
+	function updateZIndex(value: number): number {
+		if (!element) return value;
+		const z = Math.max(0, Math.min(maxZIndex, Math.round(value)));
 		onUpdateElement(element.name, {
 			...element,
 			layout: { ...element.layout, zIndex: z }
 		});
+		return z;
+	}
+
+	function handleChange(
+		e: Event,
+		updater: (value: number) => number,
+		parser: (s: string) => number
+	) {
+		const input = e.target as HTMLInputElement;
+		const result = updater(parser(input.value) || 0);
+		input.value = String(result);
 	}
 </script>
 
@@ -67,8 +83,7 @@
 					min="0"
 					max={SLIDE_WIDTH}
 					value={element.layout.position.x}
-					onchange={(e) =>
-						updatePosition('x', parseFloat((e.target as HTMLInputElement).value) || 0)}
+					onchange={(e) => handleChange(e, (v) => updatePosition('x', v), parseFloat)}
 					class="w-full mt-0.5 px-1.5 py-0.5 border border-gray-300 text-xs font-mono"
 				/>
 			</label>
@@ -80,8 +95,7 @@
 					min="0"
 					max={SLIDE_HEIGHT}
 					value={element.layout.position.y}
-					onchange={(e) =>
-						updatePosition('y', parseFloat((e.target as HTMLInputElement).value) || 0)}
+					onchange={(e) => handleChange(e, (v) => updatePosition('y', v), parseFloat)}
 					class="w-full mt-0.5 px-1.5 py-0.5 border border-gray-300 text-xs font-mono"
 				/>
 			</label>
@@ -93,7 +107,7 @@
 					min={MIN_ELEMENT_SIZE[element.name].w}
 					max={SLIDE_WIDTH}
 					value={element.layout.size.w}
-					onchange={(e) => updateSize('w', parseFloat((e.target as HTMLInputElement).value) || 0)}
+					onchange={(e) => handleChange(e, (v) => updateSize('w', v), parseFloat)}
 					class="w-full mt-0.5 px-1.5 py-0.5 border border-gray-300 text-xs font-mono"
 				/>
 			</label>
@@ -105,21 +119,21 @@
 					min={MIN_ELEMENT_SIZE[element.name].h}
 					max={SLIDE_HEIGHT}
 					value={element.layout.size.h}
-					onchange={(e) => updateSize('h', parseFloat((e.target as HTMLInputElement).value) || 0)}
+					onchange={(e) => handleChange(e, (v) => updateSize('h', v), parseFloat)}
 					class="w-full mt-0.5 px-1.5 py-0.5 border border-gray-300 text-xs font-mono"
 				/>
 			</label>
 		</div>
 
 		<label class="text-xs text-gray-500 block">
-			zIndex
+			zIndex (max {maxZIndex})
 			<input
 				type="number"
 				step="1"
 				min="0"
-				max="10"
+				max={maxZIndex}
 				value={element.layout.zIndex}
-				onchange={(e) => updateZIndex(parseInt((e.target as HTMLInputElement).value) || 0)}
+				onchange={(e) => handleChange(e, updateZIndex, parseInt)}
 				class="w-20 mt-0.5 px-1.5 py-0.5 border border-gray-300 text-xs font-mono"
 			/>
 		</label>
