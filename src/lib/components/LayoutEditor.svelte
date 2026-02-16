@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { SlideTemplate, TemplateElement, ElementName } from '$lib/types';
 	import LayoutCanvas from './LayoutCanvas.svelte';
-	import LayoutPalette from './LayoutPalette.svelte';
 	import LayoutPropertyPanel from './LayoutPropertyPanel.svelte';
 
 	interface Props {
@@ -32,12 +31,6 @@
 		};
 		onChange(structuredClone($state.snapshot(template)));
 	}
-
-	function handleToggleElement(name: ElementName, enabled: boolean) {
-		const el = template.elements.find((e) => e.name === name);
-		if (!el) return;
-		handleUpdateElement(name, { ...el, enabled });
-	}
 </script>
 
 <div class="space-y-3">
@@ -49,35 +42,21 @@
 		</label>
 	</div>
 
-	<div class="flex gap-4">
-		<!-- Left: Palette -->
-		<div class="w-44 shrink-0">
-			<LayoutPalette
-				elements={template.elements}
-				{selectedElement}
-				onSelectElement={handleSelectElement}
-				onToggleElement={handleToggleElement}
-			/>
-		</div>
-
-		<!-- Center: Canvas -->
-		<div class="flex-1 min-w-0">
-			<LayoutCanvas
-				elements={template.elements}
-				{selectedElement}
-				{snapEnabled}
-				onSelectElement={handleSelectElement}
-				onUpdateElement={handleUpdateElement}
-			/>
-		</div>
-
-		<!-- Right: Property Panel -->
-		<div class="w-44 shrink-0">
-			<LayoutPropertyPanel
-				element={selectedEl}
-				elementCount={template.elements.length}
-				onUpdateElement={handleUpdateElement}
-			/>
-		</div>
+	<!-- Canvas (full width) -->
+	<div class="relative">
+		<LayoutCanvas
+			elements={template.elements}
+			{selectedElement}
+			{snapEnabled}
+			onSelectElement={handleSelectElement}
+			onUpdateElement={handleUpdateElement}
+		/>
 	</div>
+
+	<!-- Property Panel (horizontal, below canvas) -->
+	<LayoutPropertyPanel
+		element={selectedEl}
+		elementCount={template.elements.length}
+		onUpdateElement={handleUpdateElement}
+	/>
 </div>

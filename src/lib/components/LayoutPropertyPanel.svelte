@@ -69,64 +69,60 @@
 </script>
 
 {#if element}
-	<div class="space-y-3">
-		<p class="text-xs text-gray-500">
-			Properties: <span class="font-semibold text-gray-700">{element.name}</span>
+	<div class="flex items-center gap-3 flex-wrap">
+		<p class="text-xs text-gray-500 shrink-0">
+			<span class="font-semibold text-gray-700">{element.name}</span>
 		</p>
-
-		<div class="grid grid-cols-2 gap-2">
-			<label class="text-xs text-gray-500">
-				x (in)
-				<input
-					type="number"
-					step="0.05"
-					min="0"
-					max={SLIDE_WIDTH}
-					value={element.layout.position.x}
-					onchange={(e) => handleChange(e, (v) => updatePosition('x', v), parseFloat)}
-					class="w-full mt-0.5 px-1.5 py-0.5 border border-gray-300 text-xs font-mono"
-				/>
-			</label>
-			<label class="text-xs text-gray-500">
-				y (in)
-				<input
-					type="number"
-					step="0.05"
-					min="0"
-					max={SLIDE_HEIGHT}
-					value={element.layout.position.y}
-					onchange={(e) => handleChange(e, (v) => updatePosition('y', v), parseFloat)}
-					class="w-full mt-0.5 px-1.5 py-0.5 border border-gray-300 text-xs font-mono"
-				/>
-			</label>
-			<label class="text-xs text-gray-500">
-				w (in)
-				<input
-					type="number"
-					step="0.05"
-					min={MIN_ELEMENT_SIZE[element.name].w}
-					max={SLIDE_WIDTH}
-					value={element.layout.size.w}
-					onchange={(e) => handleChange(e, (v) => updateSize('w', v), parseFloat)}
-					class="w-full mt-0.5 px-1.5 py-0.5 border border-gray-300 text-xs font-mono"
-				/>
-			</label>
-			<label class="text-xs text-gray-500">
-				h (in)
-				<input
-					type="number"
-					step="0.05"
-					min={MIN_ELEMENT_SIZE[element.name].h}
-					max={SLIDE_HEIGHT}
-					value={element.layout.size.h}
-					onchange={(e) => handleChange(e, (v) => updateSize('h', v), parseFloat)}
-					class="w-full mt-0.5 px-1.5 py-0.5 border border-gray-300 text-xs font-mono"
-				/>
-			</label>
-		</div>
-
-		<label class="text-xs text-gray-500 block">
-			zIndex (max {maxZIndex})
+		<label class="flex items-center gap-1 text-xs text-gray-500">
+			x
+			<input
+				type="number"
+				step="0.05"
+				min="0"
+				max={SLIDE_WIDTH}
+				value={element.layout.position.x}
+				onchange={(e) => handleChange(e, (v) => updatePosition('x', v), parseFloat)}
+				class="w-16 px-1 py-0.5 border border-gray-300 text-xs font-mono"
+			/>
+		</label>
+		<label class="flex items-center gap-1 text-xs text-gray-500">
+			y
+			<input
+				type="number"
+				step="0.05"
+				min="0"
+				max={SLIDE_HEIGHT}
+				value={element.layout.position.y}
+				onchange={(e) => handleChange(e, (v) => updatePosition('y', v), parseFloat)}
+				class="w-16 px-1 py-0.5 border border-gray-300 text-xs font-mono"
+			/>
+		</label>
+		<label class="flex items-center gap-1 text-xs text-gray-500">
+			w
+			<input
+				type="number"
+				step="0.05"
+				min={MIN_ELEMENT_SIZE[element.name].w}
+				max={SLIDE_WIDTH}
+				value={element.layout.size.w}
+				onchange={(e) => handleChange(e, (v) => updateSize('w', v), parseFloat)}
+				class="w-16 px-1 py-0.5 border border-gray-300 text-xs font-mono"
+			/>
+		</label>
+		<label class="flex items-center gap-1 text-xs text-gray-500">
+			h
+			<input
+				type="number"
+				step="0.05"
+				min={MIN_ELEMENT_SIZE[element.name].h}
+				max={SLIDE_HEIGHT}
+				value={element.layout.size.h}
+				onchange={(e) => handleChange(e, (v) => updateSize('h', v), parseFloat)}
+				class="w-16 px-1 py-0.5 border border-gray-300 text-xs font-mono"
+			/>
+		</label>
+		<label class="flex items-center gap-1 text-xs text-gray-500">
+			z
 			<input
 				type="number"
 				step="1"
@@ -134,7 +130,7 @@
 				max={maxZIndex}
 				value={element.layout.zIndex}
 				onchange={(e) => handleChange(e, updateZIndex, parseInt)}
-				class="w-20 mt-0.5 px-1.5 py-0.5 border border-gray-300 text-xs font-mono"
+				class="w-12 px-1 py-0.5 border border-gray-300 text-xs font-mono"
 			/>
 		</label>
 	</div>
