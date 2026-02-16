@@ -1,14 +1,17 @@
 <script lang="ts">
 	import type { SlideTemplate, TemplateElement, ElementName } from '$lib/types';
+	import { clampPosition } from '$lib/templates/layoutUtils';
 	import LayoutCanvas from './LayoutCanvas.svelte';
+	import LayoutPalettePopover from './LayoutPalettePopover.svelte';
 	import LayoutPropertyPanel from './LayoutPropertyPanel.svelte';
 
 	interface Props {
 		initialTemplate: SlideTemplate;
+		disabledElements?: ElementName[];
 		onChange: (template: SlideTemplate) => void;
 	}
 
-	let { initialTemplate, onChange }: Props = $props();
+	let { initialTemplate, disabledElements = [], onChange }: Props = $props();
 
 	// Deep clone to avoid mutating the original
 	let template: SlideTemplate = $state(structuredClone($state.snapshot(initialTemplate)));
@@ -31,6 +34,24 @@
 		};
 		onChange(structuredClone($state.snapshot(template)));
 	}
+
+	function handleDropElement(name: ElementName, x: number, y: number) {
+		const el = template.elements.find((e) => e.name === name);
+		if (!el) return;
+		const clamped = clampPosition(x, y, el.layout.size.w, el.layout.size.h);
+		handleUpdateElement(name, {
+			...el,
+			enabled: true,
+			layout: { ...el.layout, position: clamped }
+		});
+	}
+
+	function handleRemoveElement(name: ElementName) {
+		const el = template.elements.find((e) => e.name === name);
+		if (!el) return;
+		handleUpdateElement(name, { ...el, enabled: false });
+		if (selectedElement === name) selectedElement = null;
+	}
 </script>
 
 <div class="space-y-3">
@@ -42,7 +63,7 @@
 		</label>
 	</div>
 
-	<!-- Canvas (full width) -->
+	<!-- Canvas + Popover wrapper -->
 	<div class="relative">
 		<LayoutCanvas
 			elements={template.elements}
@@ -50,7 +71,10 @@
 			{snapEnabled}
 			onSelectElement={handleSelectElement}
 			onUpdateElement={handleUpdateElement}
+			onDropElement={handleDropElement}
+			onRemoveElement={handleRemoveElement}
 		/>
+		<LayoutPalettePopover elements={template.elements} {disabledElements} />
 	</div>
 
 	<!-- Property Panel (horizontal, below canvas) -->

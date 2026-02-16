@@ -20,10 +20,19 @@
 		snapEnabled: boolean;
 		onSelectElement: (name: ElementName | null) => void;
 		onUpdateElement: (name: ElementName, element: TemplateElement) => void;
+		onDropElement: (name: ElementName, x: number, y: number) => void;
+		onRemoveElement: (name: ElementName) => void;
 	}
 
-	let { elements, selectedElement, snapEnabled, onSelectElement, onUpdateElement }: Props =
-		$props();
+	let {
+		elements,
+		selectedElement,
+		snapEnabled,
+		onSelectElement,
+		onUpdateElement,
+		onDropElement,
+		onRemoveElement
+	}: Props = $props();
 
 	let canvasEl: HTMLDivElement | undefined = $state();
 	let canvasWidth = $state(0);
@@ -216,6 +225,25 @@
 		target.releasePointerCapture(e.pointerId);
 		dragState = null;
 	}
+
+	// --- HTML5 Drag: Drop from palette ---
+
+	function handleDragOver(e: DragEvent) {
+		e.preventDefault();
+		if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+	}
+
+	function handleDrop(e: DragEvent) {
+		e.preventDefault();
+		const name = e.dataTransfer?.getData('text/plain') as ElementName | undefined;
+		if (!name || !canvasEl || scale === 0) return;
+		const el = elements.find((el) => el.name === name);
+		if (!el) return;
+		const rect = canvasEl.getBoundingClientRect();
+		const dropX = toInch(e.clientX - rect.left, scale) - el.layout.size.w / 2;
+		const dropY = toInch(e.clientY - rect.top, scale) - el.layout.size.h / 2;
+		onDropElement(name, maybeSnap(dropX), maybeSnap(dropY));
+	}
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -225,6 +253,8 @@
 	onclick={handleCanvasClick}
 	onpointermove={handlePointerMove}
 	onpointerup={handlePointerUp}
+	ondragover={handleDragOver}
+	ondrop={handleDrop}
 >
 	{#if scale > 0}
 		{#each enabledElements() as el (el.name)}
@@ -236,7 +266,7 @@
 			{@const height = toPixel(el.layout.size.h, scale)}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
-				class="absolute flex items-start justify-start"
+				class="absolute group flex items-start justify-start"
 				style="left:{left}px;top:{top}px;width:{width}px;height:{height}px;
 					background:{color}CC;
 					border:{isSelected ? '2px solid' : '1px dashed'} {color};
@@ -258,6 +288,21 @@
 				>
 					{el.layout.zIndex}
 				</span>
+
+				<!-- X remove button (visible on hover) -->
+				<button
+					class="absolute top-0 right-0 w-4 h-4 flex items-center justify-center
+						bg-red-500 text-white text-[10px] leading-none cursor-pointer
+						hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+					style="z-index:999;"
+					onclick={(e) => {
+						e.stopPropagation();
+						onRemoveElement(el.name);
+					}}
+					onpointerdown={(e) => e.stopPropagation()}
+				>
+					x
+				</button>
 
 				{#if isSelected}
 					{#each RESIZE_HANDLES as { handle, cursor }}
