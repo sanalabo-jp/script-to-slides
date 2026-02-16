@@ -243,6 +243,7 @@
 					z-index:{el.layout.zIndex};
 					cursor:{dragState?.mode === 'resize' ? 'auto' : 'move'};"
 				onpointerdown={(e) => handlePointerDown(e, el.name)}
+				onclick={(e) => e.stopPropagation()}
 			>
 				<span
 					class="px-0.5 text-white leading-none select-none pointer-events-none"
@@ -265,6 +266,7 @@
 							class="absolute bg-white border border-gray-500"
 							style="{handleStyle(handle, width, height)}cursor:{cursor};z-index:999;"
 							onpointerdown={(e) => handleResizeDown(e, el.name, handle)}
+							onclick={(e) => e.stopPropagation()}
 						></div>
 					{/each}
 				{/if}
