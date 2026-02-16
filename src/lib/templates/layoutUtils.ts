@@ -1,4 +1,4 @@
-import type { ElementName, Position, Size } from '$lib/types';
+import type { ElementName, Position, Size, TemplateElement } from '$lib/types';
 
 // === Slide Dimensions (LAYOUT_WIDE: 16:9) ===
 
@@ -18,6 +18,17 @@ export const ELEMENT_COLORS: Record<ElementName, string> = {
 	body: '#78716c', // stone-500
 	image: '#9ca3af', // gray-400
 	caption: '#a8a29e' // stone-400
+};
+
+// === Element Labels (data source names for UI display) ===
+
+export const ELEMENT_LABELS: Record<ElementName, string> = {
+	callout1: 'metadata',
+	callout2: 'speaker',
+	title: 'summary',
+	body: 'context',
+	image: 'image',
+	caption: 'detail'
 };
 
 // === Minimum Element Sizes (inches) ===
@@ -69,4 +80,49 @@ export function clampSize(w: number, h: number, minW: number, minH: number): Siz
 export function snapToGrid(value: number, gridSize: number): number {
 	if (gridSize === 0) return value;
 	return Math.round(value / gridSize) * gridSize;
+}
+
+// === Overlap Detection ===
+
+export interface OverlapRect {
+	x: number;
+	y: number;
+	w: number;
+	h: number;
+}
+
+/**
+ * Detect AABB overlaps between enabled elements sharing the same zIndex.
+ * Returns intersection rectangles for each overlapping pair.
+ */
+export function computeOverlaps(elements: TemplateElement[]): OverlapRect[] {
+	const enabled = elements.filter((el) => el.enabled !== false);
+	const overlaps: OverlapRect[] = [];
+
+	for (let i = 0; i < enabled.length; i++) {
+		for (let j = i + 1; j < enabled.length; j++) {
+			const a = enabled[i];
+			const b = enabled[j];
+			if (a.layout.zIndex !== b.layout.zIndex) continue;
+
+			const x = Math.max(a.layout.position.x, b.layout.position.x);
+			const y = Math.max(a.layout.position.y, b.layout.position.y);
+			const right = Math.min(
+				a.layout.position.x + a.layout.size.w,
+				b.layout.position.x + b.layout.size.w
+			);
+			const bottom = Math.min(
+				a.layout.position.y + a.layout.size.h,
+				b.layout.position.y + b.layout.size.h
+			);
+			const w = right - x;
+			const h = bottom - y;
+
+			if (w > 0 && h > 0) {
+				overlaps.push({ x, y, w, h });
+			}
+		}
+	}
+
+	return overlaps;
 }

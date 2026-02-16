@@ -4,14 +4,16 @@ import {
 	SLIDE_HEIGHT,
 	DEFAULT_GRID_SIZE,
 	ELEMENT_COLORS,
+	ELEMENT_LABELS,
 	MIN_ELEMENT_SIZE,
 	toPixel,
 	toInch,
 	clampPosition,
 	clampSize,
-	snapToGrid
+	snapToGrid,
+	computeOverlaps
 } from './layoutUtils';
-import type { ElementName } from '$lib/types';
+import type { ElementName, TemplateElement } from '$lib/types';
 
 // === Constants ===
 
@@ -147,5 +149,118 @@ describe('snapToGrid', () => {
 
 	it('returns value unchanged when gridSize is 0', () => {
 		expect(snapToGrid(1.23, 0)).toBe(1.23);
+	});
+});
+
+// === ELEMENT_LABELS ===
+
+describe('ELEMENT_LABELS', () => {
+	it('has entries for all 6 element names', () => {
+		const names: ElementName[] = ['callout1', 'callout2', 'title', 'body', 'image', 'caption'];
+		for (const name of names) {
+			expect(ELEMENT_LABELS[name]).toBeTruthy();
+		}
+	});
+
+	it('maps element names to data source labels', () => {
+		expect(ELEMENT_LABELS.callout1).toBe('metadata');
+		expect(ELEMENT_LABELS.callout2).toBe('speaker');
+		expect(ELEMENT_LABELS.title).toBe('summary');
+		expect(ELEMENT_LABELS.body).toBe('context');
+		expect(ELEMENT_LABELS.image).toBe('image');
+		expect(ELEMENT_LABELS.caption).toBe('detail');
+	});
+});
+
+// === computeOverlaps ===
+
+function makeElement(
+	name: ElementName,
+	x: number,
+	y: number,
+	w: number,
+	h: number,
+	zIndex: number,
+	enabled?: boolean
+): TemplateElement {
+	return {
+		name,
+		layout: { position: { x, y }, size: { w, h }, zIndex },
+		styles: [{ fontFamily: 'Noto Sans', fontSize: 14, fontColor: '000000', fontWeight: 400 }],
+		enabled
+	};
+}
+
+describe('computeOverlaps', () => {
+	it('returns empty array for empty input', () => {
+		expect(computeOverlaps([])).toEqual([]);
+	});
+
+	it('returns empty array when overlapping elements have different zIndex', () => {
+		const elements = [
+			makeElement('callout1', 0, 0, 5, 3, 1),
+			makeElement('callout2', 2, 1, 5, 3, 2)
+		];
+		expect(computeOverlaps(elements)).toEqual([]);
+	});
+
+	it('returns empty array when same zIndex elements do not overlap', () => {
+		const elements = [
+			makeElement('callout1', 0, 0, 2, 2, 1),
+			makeElement('callout2', 5, 5, 2, 2, 1)
+		];
+		expect(computeOverlaps(elements)).toEqual([]);
+	});
+
+	it('returns intersection rect for same zIndex partial overlap', () => {
+		const elements = [
+			makeElement('callout1', 0, 0, 4, 3, 1),
+			makeElement('callout2', 2, 1, 4, 3, 1)
+		];
+		const result = computeOverlaps(elements);
+		expect(result).toHaveLength(1);
+		expect(result[0]).toEqual({ x: 2, y: 1, w: 2, h: 2 });
+	});
+
+	it('returns inner rect for same zIndex containment', () => {
+		const elements = [
+			makeElement('callout1', 0, 0, 10, 7, 1),
+			makeElement('callout2', 2, 1, 3, 2, 1)
+		];
+		const result = computeOverlaps(elements);
+		expect(result).toHaveLength(1);
+		expect(result[0]).toEqual({ x: 2, y: 1, w: 3, h: 2 });
+	});
+
+	it('returns multiple overlaps: A-B and B-C but not A-C', () => {
+		const elements = [
+			makeElement('callout1', 0, 0, 3, 2, 1),
+			makeElement('callout2', 2, 0, 3, 2, 1),
+			makeElement('title', 4, 0, 3, 2, 1)
+		];
+		const result = computeOverlaps(elements);
+		expect(result).toHaveLength(2);
+		// A-B overlap: x=2, y=0, w=1, h=2
+		expect(result).toContainEqual({ x: 2, y: 0, w: 1, h: 2 });
+		// B-C overlap: x=4, y=0, w=1, h=2
+		expect(result).toContainEqual({ x: 4, y: 0, w: 1, h: 2 });
+	});
+
+	it('excludes enabled: false elements', () => {
+		const elements = [
+			makeElement('callout1', 0, 0, 4, 3, 1, true),
+			makeElement('callout2', 2, 1, 4, 3, 1, false)
+		];
+		expect(computeOverlaps(elements)).toEqual([]);
+	});
+
+	it('includes enabled: undefined elements (treated as enabled)', () => {
+		const elements = [
+			makeElement('callout1', 0, 0, 4, 3, 1, undefined),
+			makeElement('callout2', 2, 1, 4, 3, 1, undefined)
+		];
+		const result = computeOverlaps(elements);
+		expect(result).toHaveLength(1);
+		expect(result[0]).toEqual({ x: 2, y: 1, w: 2, h: 2 });
 	});
 });

@@ -10,7 +10,8 @@
 		clampPosition,
 		clampSize,
 		snapToGrid,
-		DEFAULT_GRID_SIZE
+		DEFAULT_GRID_SIZE,
+		computeOverlaps
 	} from '$lib/templates/layoutUtils';
 
 	interface Props {
@@ -237,7 +238,7 @@
 			<div
 				class="absolute flex items-start justify-start"
 				style="left:{left}px;top:{top}px;width:{width}px;height:{height}px;
-					background:{color}20;
+					background:{color}CC;
 					border:{isSelected ? '2px solid' : '1px dashed'} {color};
 					z-index:{el.layout.zIndex};
 					cursor:{dragState?.mode === 'resize' ? 'auto' : 'move'};"
@@ -248,6 +249,13 @@
 					style="font-size:{Math.max(9, Math.min(11, scale * 0.8))}px;background:{color};"
 				>
 					{el.name}
+				</span>
+
+				<span
+					class="absolute bottom-0 left-0 px-0.5 text-white leading-none select-none pointer-events-none opacity-70"
+					style="font-size:{Math.max(8, Math.min(10, scale * 0.7))}px;background:{color};"
+				>
+					{el.layout.zIndex}
 				</span>
 
 				{#if isSelected}
@@ -261,6 +269,20 @@
 					{/each}
 				{/if}
 			</div>
+		{/each}
+
+		<!-- Overlap hatching layer -->
+		{@const overlaps = computeOverlaps(elements)}
+		{#each overlaps as rect}
+			<div
+				class="absolute pointer-events-none"
+				style="left:{toPixel(rect.x, scale)}px;top:{toPixel(rect.y, scale)}px;
+					width:{toPixel(rect.w, scale)}px;height:{toPixel(rect.h, scale)}px;
+					z-index:998;
+					background:repeating-linear-gradient(45deg,
+						transparent, transparent 3px,
+						rgba(239,68,68,0.3) 3px, rgba(239,68,68,0.3) 5px);"
+			></div>
 		{/each}
 	{/if}
 </div>
