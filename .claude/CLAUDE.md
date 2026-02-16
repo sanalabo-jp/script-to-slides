@@ -6,7 +6,7 @@
 - **배포 URL**: https://script-to-slides-five.vercel.app
 - **GitHub**: sanalabo-jp/script-to-slides
 - **현재 버전**: v1.0.2
-- **활성 브랜치**: `feature/slide-layout-system` (기능2 Phase 1)
+- **활성 브랜치**: `feature/slide-layout-system` (기능2 Phase 1+2)
 
 ## 브랜치 전략
 - **main**: 안정 릴리스 브랜치. feature/fix 브랜치의 머지 대상
@@ -39,9 +39,9 @@ ParseResult
 
 ## UI 흐름 (4단계)
 ```
-[1] Upload (File 탭 / Manual 탭) → [2] Preview → [3] Template Style → [4] Generate
+[1] Upload (File 탭 / Manual 탭) → [2] Preview → [3] Template Style → [3b] Template Layout (optional) → [4] Generate
 ```
-- Template Layout 스텝은 Phase 2에서 추가 예정
+- Template Layout: 레이아웃 에디터 (캔버스 드래그 + 리사이즈 + 팔레트 + 속성 패널)
 - File 탭: .txt 파일 드래그 앤 드롭 업로드
 - Manual 탭: 채팅 스타일로 대사를 한 줄씩 직접 입력 (실험적)
 
@@ -62,7 +62,8 @@ src/
 │   │   └── pptxTemplateUtils.ts  # 파서 순수 함수 + 타입 (색상 modifier, HSL 변환, mergeStyles, buildTemplate 등)
 │   ├── templates/
 │   │   ├── presets.ts            # 프리셋 3종 + LECTURE_LAYOUT 좌표 (elements 배열 구조)
-│   │   └── templateUtils.ts      # 템플릿 유틸 (findElement, getPrimaryStyle, deriveSecondaryFontStyle, createBlankCustomTemplate, resolveUniqueName)
+│   │   ├── templateUtils.ts      # 템플릿 유틸 (findElement, getPrimaryStyle, deriveSecondaryFontStyle, createBlankCustomTemplate, resolveUniqueName)
+│   │   └── layoutUtils.ts        # 레이아웃 좌표 변환 (toPixel/toInch, clamp, snap, ELEMENT_COLORS, ELEMENT_LABELS, MIN_ELEMENT_SIZE, computeOverlaps)
 │   ├── types/
 │   │   └── index.ts              # 타입 정의 (Position, Size, ElementLayout, ElementFontStyle, ElementName, TemplateElement, SlideTemplate 등)
 │   ├── utils/
@@ -81,7 +82,11 @@ src/
 │       ├── CustomTemplateTab.svelte # 커스텀 탭 (다중 파일 업로드 + 자동 저장 + 템플릿 리스트 + 에디터)
 │       ├── TemplatePreviewCard.svelte # 재사용 4:3 미리보기 카드 (항상 border-2, title bold truncate, desc truncate 1줄, [*] 인라인)
 │       ├── TemplateEditor.svelte  # 인라인 폼 (elements 기반 편집 + callout2 secondary 자동파생)
-│       └── TemplateTooltip.svelte # hover 시 floating 상세 미리보기 (항상 마운트, visible && template으로 제어)
+│       ├── TemplateTooltip.svelte # hover 시 floating 상세 미리보기 (항상 마운트, visible && template으로 제어)
+│       ├── LayoutEditor.svelte    # 레이아웃 에디터 오케스트레이터 (Canvas + PalettePopover + PropertyPanel)
+│       ├── LayoutCanvas.svelte    # 캔버스 — 불투명 배경 + zIndex 라벨 + 겹침 해칭 + 드래그 이동/리사이즈 + 드롭 타겟 + X 제거
+│       ├── LayoutPalettePopover.svelte # 캔버스 우측 하단 팝오버 — 미배치 요소 draggable 리스트 + disabled 회색 처리
+│       └── LayoutPropertyPanel.svelte # 속성 패널 — 가로 1행 (name | x y | w h | z)
 ├── routes/
 │   ├── +page.svelte              # 메인 페이지 (4단계 UI, template-style/template-layout 분리)
 │   ├── +layout.svelte            # 레이아웃
@@ -190,10 +195,10 @@ src/
 - **핵심**: SlideTemplate에 layout(배치 좌표) 정보 추가 + 사용자 정의 레이아웃 에디터
 - **스코프**: Lecture(강의) 타입 전용, ScriptType별 레이아웃은 이후 확장
 - Phase 1 완료: SlideTemplate.elements 배열 + 렌더러 리팩토링 + Lecture 프리셋 레이아웃 + 컴포넌트 전환
-- Phase 2: 레이아웃 에디터 (팔레트 + 캔버스 + 드래그 배치)
+- Phase 2 완료: 레이아웃 에디터 (LayoutEditor + LayoutCanvas + LayoutPalettePopover + LayoutPropertyPanel, 드래그 이동/리사이즈 + 팝오버 드래그 앤 드롭 + X 제거 + 불투명 배경/zIndex 라벨/겹침 해칭 + 가로 속성 패널)
 - Phase 3: .pptx 업로드 시 배치 정보 추출 (기능1 Phase 2 확장)
 - **슬라이드 구성**: 표지(Cover) + 콘텐츠만 (엔딩 슬라이드 제거)
-- **타입 구조**: `SlideTemplate { elements: TemplateElement[] }`, 각 TemplateElement = `{ name: ElementName, layout: ElementLayout, styles: ElementFontStyle[] }`
+- **타입 구조**: `SlideTemplate { elements: TemplateElement[] }`, 각 TemplateElement = `{ name: ElementName, layout: ElementLayout, styles: ElementFontStyle[], enabled?: boolean }`
 - **듀얼 스타일**: callout2(speaker)는 styles[0]=name(primary,bold), styles[1]=role(secondary,derived)
 ### 기능 3: 관련 시각적 정보 색인 로직
 ### 기능 4: 관련 외부 정보 색인 로직

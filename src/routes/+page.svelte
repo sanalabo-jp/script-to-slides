@@ -279,6 +279,7 @@
 	{#if step === 'template-layout' && selectedTemplate}
 		<LayoutEditor
 			initialTemplate={selectedTemplate}
+			disabledElements={['image']}
 			onChange={(t) => {
 				selectedTemplate = t;
 			}}
