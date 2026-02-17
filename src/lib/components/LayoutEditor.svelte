@@ -80,6 +80,17 @@
 		onChange(structuredClone($state.snapshot(template)));
 		if (selectedElement === name) selectedElement = null;
 	}
+
+	function handleBringToFront(name: ElementName) {
+		const enabledCount = template.elements.filter((el) => el.enabled !== false).length;
+		template = { ...template, elements: reorderZIndex(template.elements, name, enabledCount) };
+		onChange(structuredClone($state.snapshot(template)));
+	}
+
+	function handleSendToBack(name: ElementName) {
+		template = { ...template, elements: reorderZIndex(template.elements, name, 1) };
+		onChange(structuredClone($state.snapshot(template)));
+	}
 </script>
 
 <div class="space-y-3">
@@ -101,6 +112,8 @@
 			onUpdateElement={handleUpdateElement}
 			onDropElement={handleDropElement}
 			onRemoveElement={handleRemoveElement}
+			onBringToFront={handleBringToFront}
+			onSendToBack={handleSendToBack}
 		/>
 		<LayoutPalettePopover elements={template.elements} {disabledElements} />
 	</div>

@@ -23,6 +23,8 @@
 		onUpdateElement: (name: ElementName, element: TemplateElement) => void;
 		onDropElement: (name: ElementName, x: number, y: number) => void;
 		onRemoveElement: (name: ElementName) => void;
+		onBringToFront: (name: ElementName) => void;
+		onSendToBack: (name: ElementName) => void;
 	}
 
 	let {
@@ -32,7 +34,9 @@
 		onSelectElement,
 		onUpdateElement,
 		onDropElement,
-		onRemoveElement
+		onRemoveElement,
+		onBringToFront,
+		onSendToBack
 	}: Props = $props();
 
 	let canvasEl: HTMLDivElement | undefined = $state();
@@ -94,7 +98,19 @@
 		return elements.filter((el) => el.enabled !== false);
 	}
 
+	// --- Context menu ---
+
+	type ContextMenuState = { x: number; y: number; elementName: ElementName } | null;
+	let contextMenu: ContextMenuState = $state(null);
+
+	function handleContextMenu(e: MouseEvent, name: ElementName) {
+		e.preventDefault();
+		e.stopPropagation();
+		contextMenu = { x: e.clientX, y: e.clientY, elementName: name };
+	}
+
 	function handleCanvasClick() {
+		contextMenu = null;
 		onSelectElement(null);
 	}
 
@@ -267,17 +283,20 @@
 			{@const height = toPixel(el.layout.size.h, scale)}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
-				class="absolute group flex items-start justify-start"
+				class="absolute"
 				style="left:{left}px;top:{top}px;width:{width}px;height:{height}px;
 					background:{color}CC;
-					border:{isSelected ? '2px solid' : '1px dashed'} {color};
+					border:1px dashed {color};
+					outline:{isSelected ? `2px solid ${color}` : 'none'};
+					outline-offset:-1px;
 					z-index:{el.layout.zIndex};
 					cursor:{dragState?.mode === 'resize' ? 'auto' : 'move'};"
 				onpointerdown={(e) => handlePointerDown(e, el.name)}
+				oncontextmenu={(e) => handleContextMenu(e, el.name)}
 				onclick={(e) => e.stopPropagation()}
 			>
 				<span
-					class="px-0.5 text-white leading-none select-none pointer-events-none"
+					class="absolute top-0 left-0 px-0.5 text-white leading-none select-none pointer-events-none"
 					style="font-size:{Math.max(9, Math.min(11, scale * 0.8))}px;background:{color};"
 				>
 					{el.name}
@@ -289,21 +308,6 @@
 				>
 					{el.layout.zIndex}
 				</span>
-
-				<!-- X remove button (visible on hover) -->
-				<button
-					class="absolute top-0 right-0 w-4 h-4 flex items-center justify-center
-						bg-red-500 text-white text-[10px] leading-none cursor-pointer
-						hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-					style="z-index:999;"
-					onclick={(e) => {
-						e.stopPropagation();
-						onRemoveElement(el.name);
-					}}
-					onpointerdown={(e) => e.stopPropagation()}
-				>
-					x
-				</button>
 
 				{#if isSelected}
 					{#each RESIZE_HANDLES as { handle, cursor }}
@@ -333,5 +337,54 @@
 						{mixed}33 3px, {mixed}33 5px);"
 			></div>
 		{/each}
+	{/if}
+
+	<!-- Context menu (fixed position to escape overflow:hidden) -->
+	{#if contextMenu}
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="fixed inset-0"
+			style="z-index:999;"
+			onclick={() => {
+				contextMenu = null;
+			}}
+			oncontextmenu={(e) => {
+				e.preventDefault();
+				contextMenu = null;
+			}}
+		></div>
+		<div
+			class="fixed bg-white border border-gray-300 shadow-md py-1 text-xs font-mono"
+			style="left:{contextMenu.x}px;top:{contextMenu.y}px;z-index:1000;"
+		>
+			<button
+				class="block w-full px-3 py-1.5 text-left hover:bg-gray-100 cursor-pointer"
+				onclick={() => {
+					onBringToFront(contextMenu!.elementName);
+					contextMenu = null;
+				}}
+			>
+				Bring to Front
+			</button>
+			<button
+				class="block w-full px-3 py-1.5 text-left hover:bg-gray-100 cursor-pointer"
+				onclick={() => {
+					onSendToBack(contextMenu!.elementName);
+					contextMenu = null;
+				}}
+			>
+				Send to Back
+			</button>
+			<div class="border-t border-gray-200 my-1"></div>
+			<button
+				class="block w-full px-3 py-1.5 text-left text-red-600 hover:bg-red-50 cursor-pointer"
+				onclick={() => {
+					onRemoveElement(contextMenu!.elementName);
+					contextMenu = null;
+				}}
+			>
+				Remove
+			</button>
+		</div>
 	{/if}
 </div>
