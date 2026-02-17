@@ -1,19 +1,84 @@
 import { describe, it, expect } from 'vitest';
 import {
+	deriveSecondaryFontStyle,
 	deriveCallout2,
 	createBlankCustomTemplate,
 	isValidHexColor,
 	resolveUniqueName,
+	findElement,
+	getPrimaryStyle,
+	getSecondaryStyle,
 	FONT_FAMILY_PRESETS,
 	FONT_WEIGHT_OPTIONS
 } from './templateUtils';
-import type { ElementStyle } from '$lib/types';
+import type { ElementFontStyle, TemplateElement } from '$lib/types';
 
-// === deriveCallout2 ===
+// === deriveSecondaryFontStyle ===
+
+describe('deriveSecondaryFontStyle', () => {
+	it('fontColor를 밝게 한다', () => {
+		const primary: ElementFontStyle = {
+			fontFamily: 'Noto Sans',
+			fontSize: 11,
+			fontColor: '#434343',
+			fontWeight: 700
+		};
+		const result = deriveSecondaryFontStyle(primary);
+		expect(result.fontColor).not.toBe(primary.fontColor);
+		const parseHex = (hex: string) => parseInt(hex.replace('#', ''), 16);
+		expect(parseHex(result.fontColor)).toBeGreaterThan(parseHex(primary.fontColor));
+	});
+
+	it('bold(700)이면 medium(500)으로 낮춘다', () => {
+		const primary: ElementFontStyle = {
+			fontFamily: 'Noto Sans',
+			fontSize: 11,
+			fontColor: '#434343',
+			fontWeight: 700
+		};
+		const result = deriveSecondaryFontStyle(primary);
+		expect(result.fontWeight).toBe(500);
+	});
+
+	it('bold 미만이면 fontWeight를 유지한다', () => {
+		const primary: ElementFontStyle = {
+			fontFamily: 'Noto Sans',
+			fontSize: 11,
+			fontColor: '#434343',
+			fontWeight: 400
+		};
+		const result = deriveSecondaryFontStyle(primary);
+		expect(result.fontWeight).toBe(400);
+	});
+
+	it('fontSize를 유지한다', () => {
+		const primary: ElementFontStyle = {
+			fontFamily: 'Arial',
+			fontSize: 14,
+			fontColor: '#000000',
+			fontWeight: 700
+		};
+		const result = deriveSecondaryFontStyle(primary);
+		expect(result.fontSize).toBe(14);
+	});
+
+	it('fontFamily를 유지한다', () => {
+		const primary: ElementFontStyle = {
+			fontFamily: 'Gothic',
+			fontSize: 12,
+			fontColor: '#333333',
+			fontWeight: 700
+		};
+		const result = deriveSecondaryFontStyle(primary);
+		expect(result.fontFamily).toBe('Gothic');
+	});
+});
+
+// === deriveCallout2 (deprecated, backward compat) ===
 
 describe('deriveCallout2', () => {
 	it('fontSize를 1pt 줄인다', () => {
-		const callout1: ElementStyle = {
+		const callout1: ElementFontStyle = {
 			fontFamily: 'Noto Sans',
 			fontSize: 11,
 			fontColor: '#999999',
@@ -24,7 +89,7 @@ describe('deriveCallout2', () => {
 	});
 
 	it('fontSize 최소값은 7', () => {
-		const callout1: ElementStyle = {
+		const callout1: ElementFontStyle = {
 			fontFamily: 'Arial',
 			fontSize: 7,
 			fontColor: '#000000',
@@ -33,31 +98,67 @@ describe('deriveCallout2', () => {
 		const result = deriveCallout2(callout1);
 		expect(result.fontSize).toBe(7);
 	});
+});
 
-	it('fontColor를 밝게 한다', () => {
-		const callout1: ElementStyle = {
-			fontFamily: 'Arial',
-			fontSize: 11,
-			fontColor: '#999999',
-			fontWeight: 400
-		};
-		const result = deriveCallout2(callout1);
-		expect(result.fontColor).not.toBe(callout1.fontColor);
-		// 밝아진 색상은 원본보다 RGB 값이 크거나 같아야 함
-		const parseHex = (hex: string) => parseInt(hex.replace('#', ''), 16);
-		expect(parseHex(result.fontColor)).toBeGreaterThan(parseHex(callout1.fontColor));
+// === findElement / getPrimaryStyle / getSecondaryStyle ===
+
+describe('findElement', () => {
+	const elements: TemplateElement[] = [
+		{
+			name: 'callout1',
+			layout: { position: { x: 0, y: 0 }, size: { w: 1, h: 1 }, zIndex: 1 },
+			styles: [{ fontFamily: 'Arial', fontSize: 10, fontColor: '#000', fontWeight: 400 }]
+		},
+		{
+			name: 'body',
+			layout: { position: { x: 0, y: 1 }, size: { w: 1, h: 1 }, zIndex: 2 },
+			styles: [{ fontFamily: 'Arial', fontSize: 12, fontColor: '#333', fontWeight: 500 }]
+		}
+	];
+
+	it('이름으로 요소를 찾는다', () => {
+		const el = findElement(elements, 'callout1');
+		expect(el).toBeDefined();
+		expect(el!.name).toBe('callout1');
 	});
 
-	it('fontFamily와 fontWeight를 그대로 유지한다', () => {
-		const callout1: ElementStyle = {
-			fontFamily: 'Gothic',
-			fontSize: 12,
-			fontColor: '#333333',
-			fontWeight: 700
+	it('존재하지 않는 요소는 undefined를 반환한다', () => {
+		expect(findElement(elements, 'image')).toBeUndefined();
+	});
+});
+
+describe('getPrimaryStyle / getSecondaryStyle', () => {
+	it('styles[0]을 primary로 반환한다', () => {
+		const el: TemplateElement = {
+			name: 'callout2',
+			layout: { position: { x: 0, y: 0 }, size: { w: 1, h: 1 }, zIndex: 1 },
+			styles: [
+				{ fontFamily: 'Arial', fontSize: 11, fontColor: '#000', fontWeight: 700 },
+				{ fontFamily: 'Arial', fontSize: 11, fontColor: '#999', fontWeight: 500 }
+			]
 		};
-		const result = deriveCallout2(callout1);
-		expect(result.fontFamily).toBe('Gothic');
-		expect(result.fontWeight).toBe(700);
+		expect(getPrimaryStyle(el)!.fontWeight).toBe(700);
+		expect(getSecondaryStyle(el)!.fontWeight).toBe(500);
+	});
+
+	it('styles가 비어있으면 undefined를 반환한다', () => {
+		const el: TemplateElement = {
+			name: 'image',
+			layout: { position: { x: 0, y: 0 }, size: { w: 1, h: 1 }, zIndex: 1 },
+			styles: []
+		};
+		expect(getPrimaryStyle(el)).toBeUndefined();
+		expect(getSecondaryStyle(el)).toBeUndefined();
+	});
+
+	it('styles가 1개면 secondary는 undefined', () => {
+		const el: TemplateElement = {
+			name: 'body',
+			layout: { position: { x: 0, y: 0 }, size: { w: 1, h: 1 }, zIndex: 1 },
+			styles: [{ fontFamily: 'Arial', fontSize: 12, fontColor: '#333', fontWeight: 500 }]
+		};
+		expect(getPrimaryStyle(el)).toBeDefined();
+		expect(getSecondaryStyle(el)).toBeUndefined();
 	});
 });
 
@@ -71,28 +172,48 @@ describe('createBlankCustomTemplate', () => {
 		expect(template.background.color).toBe('#FFFFFF');
 	});
 
-	it('모든 스타일 키가 존재한다', () => {
+	it('6개의 elements를 포함한다', () => {
 		const template = createBlankCustomTemplate();
-		const keys = [
-			'titleLabel',
-			'bodyLabel',
-			'callout1Label',
-			'callout2Label',
-			'captionLabel'
-		] as const;
-		for (const key of keys) {
-			expect(template.styles[key]).toBeDefined();
-			expect(template.styles[key].fontFamily).toBeTruthy();
-			expect(template.styles[key].fontSize).toBeGreaterThan(0);
-			expect(template.styles[key].fontColor).toMatch(/^#/);
+		expect(template.elements).toHaveLength(6);
+		const names = template.elements.map((e) => e.name);
+		expect(names).toContain('callout1');
+		expect(names).toContain('callout2');
+		expect(names).toContain('title');
+		expect(names).toContain('body');
+		expect(names).toContain('image');
+		expect(names).toContain('caption');
+	});
+
+	it('각 텍스트 요소에 primary style이 존재한다', () => {
+		const template = createBlankCustomTemplate();
+		for (const el of template.elements) {
+			if (el.name === 'image') {
+				expect(el.styles).toHaveLength(0);
+			} else {
+				expect(el.styles.length).toBeGreaterThanOrEqual(1);
+				expect(el.styles[0].fontFamily).toBeTruthy();
+				expect(el.styles[0].fontSize).toBeGreaterThan(0);
+			}
 		}
 	});
 
-	it('callout2Label은 callout1Label에서 파생된다', () => {
+	it('callout2에 primary + secondary 2개의 styles가 있다', () => {
 		const template = createBlankCustomTemplate();
-		const { callout1Label, callout2Label } = template.styles;
-		expect(callout2Label.fontFamily).toBe(callout1Label.fontFamily);
-		expect(callout2Label.fontSize).toBeLessThan(callout1Label.fontSize);
+		const callout2 = findElement(template.elements, 'callout2')!;
+		expect(callout2.styles).toHaveLength(2);
+		expect(callout2.styles[0].fontWeight).toBe(700); // name: bold
+		expect(callout2.styles[1].fontWeight).toBe(500); // role: medium (derived)
+	});
+
+	it('각 element에 layout 정보가 있다', () => {
+		const template = createBlankCustomTemplate();
+		for (const el of template.elements) {
+			expect(el.layout.position.x).toBeGreaterThanOrEqual(0);
+			expect(el.layout.position.y).toBeGreaterThanOrEqual(0);
+			expect(el.layout.size.w).toBeGreaterThan(0);
+			expect(el.layout.size.h).toBeGreaterThan(0);
+			expect(typeof el.layout.zIndex).toBe('number');
+		}
 	});
 
 	it('매번 고유한 id를 생성한다', () => {

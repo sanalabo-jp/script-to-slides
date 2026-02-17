@@ -17,8 +17,10 @@
 	let tooltipX = $state(0);
 	let tooltipY = $state(0);
 
-	function handleMouseEnter(template: SlideTemplate) {
+	function handleMouseEnter(e: MouseEvent, template: SlideTemplate) {
 		tooltipTemplate = template;
+		tooltipX = e.clientX;
+		tooltipY = e.clientY;
 		tooltipVisible = true;
 	}
 
@@ -43,7 +45,7 @@
 		{#each templatePresets as template}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
-				onmouseenter={() => handleMouseEnter(template)}
+				onmouseenter={(e) => handleMouseEnter(e, template)}
 				onmousemove={handleMouseMove}
 				onmouseleave={handleMouseLeave}
 			>

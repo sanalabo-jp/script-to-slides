@@ -4,6 +4,7 @@ import { describe, it, expect } from 'vitest';
 import { parsePptxTemplate } from './pptxTemplateParser';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { findElement } from '$lib/templates/templateUtils';
 
 /**
  * jsdom의 File은 arrayBuffer()를 미구현하므로, polyfill을 추가한 File을 생성한다.
@@ -42,20 +43,18 @@ describe('parsePptxTemplate (통합)', () => {
 		expect(Array.isArray(result.warnings)).toBe(true);
 		expect(typeof result.isPartial).toBe('boolean');
 
-		// 모든 스타일 키가 존재
-		const { styles } = result.template;
-		for (const key of [
-			'titleLabel',
-			'bodyLabel',
-			'callout1Label',
-			'callout2Label',
-			'captionLabel'
-		] as const) {
-			expect(styles[key]).toBeDefined();
-			expect(styles[key].fontFamily).toBeTruthy();
-			expect(styles[key].fontSize).toBeGreaterThan(0);
-			expect(styles[key].fontColor).toMatch(/^#/);
-			expect(typeof styles[key].fontWeight).toBe('number');
+		// 6개 elements 존재
+		expect(result.template.elements).toHaveLength(6);
+		for (const name of ['callout1', 'callout2', 'title', 'body', 'image', 'caption'] as const) {
+			const el = findElement(result.template.elements, name);
+			expect(el).toBeDefined();
+			if (name !== 'image') {
+				expect(el!.styles.length).toBeGreaterThanOrEqual(1);
+				expect(el!.styles[0].fontFamily).toBeTruthy();
+				expect(el!.styles[0].fontSize).toBeGreaterThan(0);
+				expect(el!.styles[0].fontColor).toMatch(/^#/);
+				expect(typeof el!.styles[0].fontWeight).toBe('number');
+			}
 		}
 	});
 
@@ -65,7 +64,8 @@ describe('parsePptxTemplate (통합)', () => {
 
 		expect(result.template.name).toBe('modern-dark');
 		expect(result.template.background.color).toMatch(/^#[0-9A-Fa-f]{6}$/);
-		expect(result.template.styles.titleLabel.fontFamily).toBeTruthy();
+		const titleEl = findElement(result.template.elements, 'title');
+		expect(titleEl!.styles[0].fontFamily).toBeTruthy();
 	});
 
 	it('dark-minimalist.pptx → 유효한 SlideTemplate을 반환한다', async () => {
@@ -73,19 +73,20 @@ describe('parsePptxTemplate (통합)', () => {
 		const result = await parsePptxTemplate(file);
 
 		expect(result.template.name).toBe('dark-minimalist');
-		expect(result.template.styles.titleLabel.fontSize).toBeGreaterThanOrEqual(
-			result.template.styles.bodyLabel.fontSize
-		);
+		const titleEl = findElement(result.template.elements, 'title');
+		const bodyEl = findElement(result.template.elements, 'body');
+		expect(titleEl!.styles[0].fontSize).toBeGreaterThanOrEqual(bodyEl!.styles[0].fontSize);
 	});
 
-	it('callout2Label은 항상 callout1에서 파생된다', async () => {
+	it('callout2에 primary + secondary 듀얼 스타일이 있다', async () => {
 		const file = loadPptxAsFile('sample/templates/clean-minimal.pptx');
 		const result = await parsePptxTemplate(file);
 
-		const { callout1Label, callout2Label } = result.template.styles;
-		expect(callout2Label.fontFamily).toBe(callout1Label.fontFamily);
-		expect(callout2Label.fontSize).toBeLessThan(callout1Label.fontSize);
-		expect(callout2Label.fontWeight).toBe(callout1Label.fontWeight);
+		const callout2 = findElement(result.template.elements, 'callout2')!;
+		expect(callout2.styles).toHaveLength(2);
+		expect(callout2.styles[0].fontWeight).toBe(700); // primary: bold (name)
+		// secondary: derived (role) — lighter color
+		expect(callout2.styles[1].fontColor).not.toBe(callout2.styles[0].fontColor);
 	});
 
 	it('잘못된 파일은 에러를 throw한다 (JSZip 실패)', async () => {

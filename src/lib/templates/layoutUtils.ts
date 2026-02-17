@@ -1,0 +1,213 @@
+import type { ElementName, Position, Size, TemplateElement } from '$lib/types';
+
+// === Slide Dimensions (LAYOUT_WIDE: 16:9) ===
+
+export const SLIDE_WIDTH = 13.33; // inches
+export const SLIDE_HEIGHT = 7.5; // inches
+
+// === Grid ===
+
+export const DEFAULT_GRID_SIZE = 0.1; // inches
+
+// === Element Colors (gray-spectrum palette for canvas visualization) ===
+
+export const ELEMENT_COLORS: Record<ElementName, string> = {
+	callout1: '#94a3b8', // slate-400
+	callout2: '#a1a1aa', // zinc-400
+	title: '#6b7280', // gray-500
+	body: '#78716c', // stone-500
+	image: '#9ca3af', // gray-400
+	caption: '#a8a29e' // stone-400
+};
+
+// === Element Labels (data source names for UI display) ===
+
+export const ELEMENT_LABELS: Record<ElementName, string> = {
+	callout1: 'metadata',
+	callout2: 'speaker',
+	title: 'summary',
+	body: 'context',
+	image: 'image',
+	caption: 'detail'
+};
+
+// === Minimum Element Sizes (inches) ===
+
+export const MIN_ELEMENT_SIZE: Record<ElementName, Size> = {
+	callout1: { w: 1.0, h: 0.2 },
+	callout2: { w: 1.0, h: 0.2 },
+	title: { w: 1.0, h: 0.3 },
+	body: { w: 2.0, h: 1.0 },
+	image: { w: 1.0, h: 0.75 },
+	caption: { w: 1.0, h: 0.2 }
+};
+
+// === Coordinate Conversion ===
+
+/** Convert inches to pixels using the given scale factor. */
+export function toPixel(inches: number, scale: number): number {
+	return inches * scale;
+}
+
+/** Convert pixels to inches using the given scale factor. Rounds to 0.01" precision. */
+export function toInch(pixels: number, scale: number): number {
+	return Math.round((pixels / scale) * 100) / 100;
+}
+
+// === Clamping ===
+
+/** Clamp position so the element stays within slide bounds. */
+export function clampPosition(x: number, y: number, w: number, h: number): Position {
+	const maxX = Math.max(0, SLIDE_WIDTH - w);
+	const maxY = Math.max(0, SLIDE_HEIGHT - h);
+	return {
+		x: Math.round(Math.min(Math.max(0, x), maxX) * 100) / 100,
+		y: Math.round(Math.min(Math.max(0, y), maxY) * 100) / 100
+	};
+}
+
+/** Clamp size between minimum and slide dimensions. */
+export function clampSize(w: number, h: number, minW: number, minH: number): Size {
+	return {
+		w: Math.min(Math.max(w, minW), SLIDE_WIDTH),
+		h: Math.min(Math.max(h, minH), SLIDE_HEIGHT)
+	};
+}
+
+// === Grid Snapping ===
+
+/** Snap a value to the nearest grid increment. Returns value unchanged if gridSize is 0. */
+export function snapToGrid(value: number, gridSize: number): number {
+	if (gridSize === 0) return value;
+	return Math.round(value / gridSize) * gridSize;
+}
+
+// === Z-index Management ===
+
+/** Return max z-index + 1 among enabled elements. Returns 1 if none enabled. */
+export function getNextZIndex(elements: TemplateElement[]): number {
+	const enabled = elements.filter((el) => el.enabled !== false);
+	if (enabled.length === 0) return 1;
+	return Math.max(...enabled.map((el) => el.layout.zIndex)) + 1;
+}
+
+/** Normalize z-indexes to dense 1..N ranking. Preserves relative order; ties broken by array order. */
+export function normalizeZIndexes(elements: TemplateElement[]): TemplateElement[] {
+	const enabled = elements.map((el, i) => ({ el, i })).filter(({ el }) => el.enabled !== false);
+
+	// Sort by zIndex, then by original array index for stability
+	enabled.sort((a, b) => a.el.layout.zIndex - b.el.layout.zIndex || a.i - b.i);
+
+	// Build rank map: elementName → new zIndex (1-based)
+	const rankMap = new Map<ElementName, number>();
+	enabled.forEach(({ el }, rank) => {
+		rankMap.set(el.name, rank + 1);
+	});
+
+	return elements.map((el) => {
+		const newZ = rankMap.get(el.name);
+		if (newZ !== undefined && newZ !== el.layout.zIndex) {
+			return { ...el, layout: { ...el.layout, zIndex: newZ } };
+		}
+		return el;
+	});
+}
+
+/** Move elementName to targetRank position, re-rank others to maintain 1..N. */
+export function reorderZIndex(
+	elements: TemplateElement[],
+	elementName: ElementName,
+	targetRank: number
+): TemplateElement[] {
+	const enabled = elements.map((el, i) => ({ el, i })).filter(({ el }) => el.enabled !== false);
+
+	const targetEntry = enabled.find(({ el }) => el.name === elementName);
+	if (!targetEntry) return elements;
+
+	// Sort by current zIndex, then array order
+	enabled.sort((a, b) => a.el.layout.zIndex - b.el.layout.zIndex || a.i - b.i);
+
+	// Remove target from sorted list
+	const sorted = enabled.filter(({ el }) => el.name !== elementName);
+
+	// Clamp targetRank to 1..N
+	const n = enabled.length;
+	const clamped = Math.max(1, Math.min(n, targetRank));
+
+	// Insert at clamped position (0-indexed = clamped - 1)
+	sorted.splice(clamped - 1, 0, targetEntry);
+
+	// Assign 1..N
+	const rankMap = new Map<ElementName, number>();
+	sorted.forEach(({ el }, idx) => {
+		rankMap.set(el.name, idx + 1);
+	});
+
+	return elements.map((el) => {
+		const newZ = rankMap.get(el.name);
+		if (newZ !== undefined && newZ !== el.layout.zIndex) {
+			return { ...el, layout: { ...el.layout, zIndex: newZ } };
+		}
+		return el;
+	});
+}
+
+// === Color Mixing ===
+
+/** Mix two hex colors by averaging their RGB channels. */
+export function mixColors(colorA: string, colorB: string): string {
+	const parse = (hex: string) => {
+		const h = hex.replace('#', '');
+		return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+	};
+	const [r1, g1, b1] = parse(colorA);
+	const [r2, g2, b2] = parse(colorB);
+	const toHex = (n: number) => Math.round(n).toString(16).padStart(2, '0');
+	return `#${toHex((r1 + r2) / 2)}${toHex((g1 + g2) / 2)}${toHex((b1 + b2) / 2)}`;
+}
+
+// === Overlap Detection ===
+
+export interface OverlapRect {
+	x: number;
+	y: number;
+	w: number;
+	h: number;
+	elementA: ElementName;
+	elementB: ElementName;
+}
+
+/**
+ * Detect AABB overlaps between all enabled element pairs.
+ * Returns intersection rectangles with element names for color mixing.
+ */
+export function computeOverlaps(elements: TemplateElement[]): OverlapRect[] {
+	const enabled = elements.filter((el) => el.enabled !== false);
+	const overlaps: OverlapRect[] = [];
+
+	for (let i = 0; i < enabled.length; i++) {
+		for (let j = i + 1; j < enabled.length; j++) {
+			const a = enabled[i];
+			const b = enabled[j];
+
+			const x = Math.max(a.layout.position.x, b.layout.position.x);
+			const y = Math.max(a.layout.position.y, b.layout.position.y);
+			const right = Math.min(
+				a.layout.position.x + a.layout.size.w,
+				b.layout.position.x + b.layout.size.w
+			);
+			const bottom = Math.min(
+				a.layout.position.y + a.layout.size.h,
+				b.layout.position.y + b.layout.size.h
+			);
+			const w = right - x;
+			const h = bottom - y;
+
+			if (w > 0 && h > 0) {
+				overlaps.push({ x, y, w, h, elementA: a.name, elementB: b.name });
+			}
+		}
+	}
+
+	return overlaps;
+}

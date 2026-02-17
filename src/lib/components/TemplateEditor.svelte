@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { SlideTemplate, ElementStyle } from '$lib/types';
+	import type { SlideTemplate, ElementName } from '$lib/types';
 	import {
-		deriveCallout2,
+		deriveSecondaryFontStyle,
 		isValidHexColor,
 		FONT_FAMILY_PRESETS,
 		FONT_WEIGHT_OPTIONS
@@ -19,31 +19,38 @@
 	let template: SlideTemplate = $state(structuredClone($state.snapshot(initialTemplate)));
 	let autoDerive = $state(true);
 
-	// Track custom font input mode per style key
-	type StyleKey = 'titleLabel' | 'bodyLabel' | 'callout1Label' | 'callout2Label' | 'captionLabel';
-	let customFontMode: Record<StyleKey, boolean> = $state({
-		titleLabel: false,
-		bodyLabel: false,
-		callout1Label: false,
-		callout2Label: false,
-		captionLabel: false
+	// Editable elements (all except 'image')
+	type EditableElement = Exclude<ElementName, 'image'>;
+	let customFontMode: Record<EditableElement, boolean> = $state({
+		callout1: false,
+		callout2: false,
+		title: false,
+		body: false,
+		caption: false
 	});
 
-	const styleEntries: { key: StyleKey; label: string }[] = [
-		{ key: 'titleLabel', label: 'Title' },
-		{ key: 'bodyLabel', label: 'Body' },
-		{ key: 'callout1Label', label: 'Callout 1' },
-		{ key: 'callout2Label', label: 'Callout 2' },
-		{ key: 'captionLabel', label: 'Caption' }
+	const editEntries: { name: EditableElement; label: string }[] = [
+		{ name: 'callout1', label: 'Callout 1' },
+		{ name: 'callout2', label: 'Callout 2' },
+		{ name: 'title', label: 'Title' },
+		{ name: 'body', label: 'Body' },
+		{ name: 'caption', label: 'Caption' }
 	];
 
-	// Auto-derive callout2 when callout1 changes
+	function getElementIndex(name: ElementName): number {
+		return template.elements.findIndex((e) => e.name === name);
+	}
+
+	// Auto-derive callout2 secondary style from primary
 	$effect(() => {
 		if (autoDerive) {
-			const c1 = template.styles.callout1Label;
-			// Read all fields to track dependencies
-			void (c1.fontFamily + c1.fontSize + c1.fontColor + c1.fontWeight);
-			template.styles.callout2Label = deriveCallout2(c1);
+			const idx = getElementIndex('callout2');
+			if (idx >= 0 && template.elements[idx].styles[0]) {
+				const primary = template.elements[idx].styles[0];
+				// Read all fields to track dependencies
+				void (primary.fontFamily + primary.fontSize + primary.fontColor + primary.fontWeight);
+				template.elements[idx].styles[1] = deriveSecondaryFontStyle(primary);
+			}
 		}
 	});
 
@@ -53,19 +60,21 @@
 		void template.name;
 		void template.description;
 		void template.background.color;
-		for (const { key } of styleEntries) {
-			const s = template.styles[key];
-			void (s.fontFamily + s.fontSize + s.fontColor + s.fontWeight);
+		for (const el of template.elements) {
+			for (const s of el.styles) {
+				void (s.fontFamily + s.fontSize + s.fontColor + s.fontWeight);
+			}
 		}
 		onChange($state.snapshot(template));
 	});
 
-	function handleFontFamilyChange(key: StyleKey, value: string) {
+	function handleFontFamilyChange(name: EditableElement, value: string) {
 		if (value === '__custom__') {
-			customFontMode[key] = true;
+			customFontMode[name] = true;
 		} else {
-			customFontMode[key] = false;
-			template.styles[key].fontFamily = value;
+			customFontMode[name] = false;
+			const idx = getElementIndex(name);
+			if (idx >= 0) template.elements[idx].styles[0].fontFamily = value;
 		}
 	}
 
@@ -118,111 +127,109 @@
 	</div>
 
 	<!-- Style sections -->
-	{#each styleEntries as { key, label }}
-		{@const style = template.styles[key]}
-		{@const isCallout2 = key === 'callout2Label'}
-		{@const disabled = isCallout2 && autoDerive}
+	{#each editEntries as { name, label }}
+		{@const idx = getElementIndex(name)}
+		{@const style = template.elements[idx]?.styles[0]}
+		{@const isCallout2 = name === 'callout2'}
 
-		<div class="space-y-1.5 {disabled ? 'opacity-50' : ''}">
-			<div class="flex items-center gap-2">
-				<span class="text-[10px] text-gray-400 uppercase tracking-wider">{label}</span>
-				{#if isCallout2}
-					<label class="flex items-center gap-1 text-[10px] text-gray-500 cursor-pointer">
-						<input type="checkbox" bind:checked={autoDerive} class="accent-gray-900" />
-						auto-derive
-					</label>
-				{/if}
-			</div>
-
-			<div class="grid grid-cols-4 gap-2">
-				<!-- Font Family -->
-				<div class="col-span-2">
-					{#if customFontMode[key] || !isFontInPresets(style.fontFamily)}
-						<div class="flex items-center gap-1">
-							<input
-								type="text"
-								class="text-xs px-2 py-1 t-input-border bg-transparent w-full"
-								placeholder="Font name..."
-								bind:value={template.styles[key].fontFamily}
-								{disabled}
-							/>
-							<button
-								class="text-[10px] text-gray-400 hover:text-gray-700 shrink-0"
-								onclick={() => {
-									customFontMode[key] = false;
-									if (!isFontInPresets(style.fontFamily)) {
-										template.styles[key].fontFamily = FONT_FAMILY_PRESETS[0];
-									}
-								}}
-								{disabled}
-							>
-								[list]
-							</button>
-						</div>
-					{:else}
-						<select
-							class="text-xs px-1 py-1 border border-gray-200 bg-white w-full"
-							value={style.fontFamily}
-							onchange={(e) => handleFontFamilyChange(key, (e.target as HTMLSelectElement).value)}
-							{disabled}
-						>
-							{#each FONT_FAMILY_PRESETS as font}
-								<option value={font}>{font}</option>
-							{/each}
-							<option value="__custom__">Custom...</option>
-						</select>
+		{#if style}
+			<div class="space-y-1.5">
+				<div class="flex items-center gap-2">
+					<span class="text-[10px] text-gray-400 uppercase tracking-wider">{label}</span>
+					{#if isCallout2}
+						<label class="flex items-center gap-1 text-[10px] text-gray-500 cursor-pointer">
+							<input type="checkbox" bind:checked={autoDerive} class="accent-gray-900" />
+							auto-derive role
+						</label>
 					{/if}
 				</div>
 
-				<!-- Font Size -->
-				<div>
+				<div class="grid grid-cols-4 gap-2">
+					<!-- Font Family -->
+					<div class="col-span-2">
+						{#if customFontMode[name] || !isFontInPresets(style.fontFamily)}
+							<div class="flex items-center gap-1">
+								<input
+									type="text"
+									class="text-xs px-2 py-1 t-input-border bg-transparent w-full"
+									placeholder="Font name..."
+									bind:value={template.elements[idx].styles[0].fontFamily}
+								/>
+								<button
+									class="text-[10px] text-gray-400 hover:text-gray-700 shrink-0"
+									onclick={() => {
+										customFontMode[name] = false;
+										if (!isFontInPresets(style.fontFamily)) {
+											template.elements[idx].styles[0].fontFamily = FONT_FAMILY_PRESETS[0];
+										}
+									}}
+								>
+									[list]
+								</button>
+							</div>
+						{:else}
+							<select
+								class="text-xs px-1 py-1 border border-gray-200 bg-white w-full"
+								value={style.fontFamily}
+								onchange={(e) =>
+									handleFontFamilyChange(name, (e.target as HTMLSelectElement).value)}
+							>
+								{#each FONT_FAMILY_PRESETS as font}
+									<option value={font}>{font}</option>
+								{/each}
+								<option value="__custom__">Custom...</option>
+							</select>
+						{/if}
+					</div>
+
+					<!-- Font Size -->
+					<div>
+						<input
+							type="number"
+							class="text-xs px-2 py-1 t-input-border bg-transparent w-full"
+							min="6"
+							max="72"
+							bind:value={template.elements[idx].styles[0].fontSize}
+						/>
+					</div>
+
+					<!-- Font Weight -->
+					<div>
+						<select
+							class="text-xs px-1 py-1 border border-gray-200 bg-white w-full"
+							value={style.fontWeight}
+							onchange={(e) => {
+								template.elements[idx].styles[0].fontWeight = Number(
+									(e.target as HTMLSelectElement).value
+								);
+							}}
+						>
+							{#each FONT_WEIGHT_OPTIONS as opt}
+								<option value={opt.value}>{opt.label}</option>
+							{/each}
+						</select>
+					</div>
+				</div>
+
+				<!-- Font Color -->
+				<div class="flex items-center gap-2">
 					<input
-						type="number"
-						class="text-xs px-2 py-1 t-input-border bg-transparent w-full"
-						min="6"
-						max="72"
-						bind:value={template.styles[key].fontSize}
-						{disabled}
+						type="color"
+						class="w-6 h-6 border border-gray-200 cursor-pointer p-0"
+						bind:value={template.elements[idx].styles[0].fontColor}
 					/>
-				</div>
-
-				<!-- Font Weight -->
-				<div>
-					<select
-						class="text-xs px-1 py-1 border border-gray-200 bg-white w-full"
-						value={style.fontWeight}
-						onchange={(e) => {
-							template.styles[key].fontWeight = Number((e.target as HTMLSelectElement).value);
+					<input
+						type="text"
+						class="text-xs px-2 py-1 t-input-border bg-transparent w-24"
+						value={style.fontColor}
+						oninput={(e) => {
+							const v = (e.target as HTMLInputElement).value;
+							if (isValidHexColor(v)) template.elements[idx].styles[0].fontColor = v;
 						}}
-						{disabled}
-					>
-						{#each FONT_WEIGHT_OPTIONS as opt}
-							<option value={opt.value}>{opt.label}</option>
-						{/each}
-					</select>
+					/>
+					<span class="text-[10px] text-gray-400">{style.fontSize}pt</span>
 				</div>
 			</div>
-
-			<!-- Font Color -->
-			<div class="flex items-center gap-2">
-				<input
-					type="color"
-					class="w-6 h-6 border border-gray-200 cursor-pointer p-0"
-					bind:value={template.styles[key].fontColor}
-					{disabled}
-				/>
-				<input
-					type="text"
-					class="text-xs px-2 py-1 t-input-border bg-transparent w-24"
-					value={style.fontColor}
-					oninput={(e) => {
-						const v = (e.target as HTMLInputElement).value;
-						if (isValidHexColor(v)) template.styles[key].fontColor = v;
-					}}
-					{disabled}
-				/>
-				<span class="text-[10px] text-gray-400">{style.fontSize}pt</span>
-			</div>
-		</div>
+		{/if}
 	{/each}
 </div>

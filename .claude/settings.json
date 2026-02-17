@@ -1,4 +1,9 @@
 {
+	"sandbox": {
+		"network": {
+			"allowedDomains": ["generativelanguage.googleapis.com"]
+		}
+	},
 	"hooks": {
 		"PostToolUse": [
 			{

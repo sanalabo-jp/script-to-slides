@@ -4,6 +4,7 @@
 	import ScriptPreview from '$lib/components/ScriptPreview.svelte';
 	import TemplateSelector from '$lib/components/TemplateSelector.svelte';
 	import CustomTemplateTab from '$lib/components/CustomTemplateTab.svelte';
+	import LayoutEditor from '$lib/components/LayoutEditor.svelte';
 	import { parseScript, readFileAsText } from '$lib/parser/scriptParser';
 	import type { AppStep, ParseResult, SlideTemplate } from '$lib/types';
 
@@ -50,7 +51,7 @@
 	}
 
 	function handleProceedToTemplate() {
-		step = 'template';
+		step = 'template-style';
 	}
 
 	async function handleGenerate() {
@@ -80,7 +81,7 @@
 			step = 'done';
 		} catch (err) {
 			errorMsg = `Generation failed: ${err instanceof Error ? err.message : 'Unknown error'}`;
-			step = 'template';
+			step = 'template-style';
 		} finally {
 			isLoading = false;
 		}
@@ -101,10 +102,11 @@
 	<!-- Step indicator -->
 	<div class="flex items-center gap-1.5 text-xs">
 		{#each ['Upload', 'Preview', 'Template', 'Generate'] as label, i}
-			{@const stepMap = {
+			{@const stepMap: Record<import('$lib/types').AppStep, number> = {
 				upload: 0,
 				preview: 1,
-				template: 2,
+				'template-style': 2,
+				'template-layout': 2,
 				analyzing: 3,
 				ready: 3,
 				generating: 3,
@@ -175,7 +177,7 @@
 	{/if}
 
 	<!-- Step 3: Template Selection -->
-	{#if step === 'template'}
+	{#if step === 'template-style'}
 		<!-- Template mode tabs -->
 		<div class="flex gap-0">
 			<button
@@ -252,11 +254,47 @@
 			>
 				[<span class="t-btn-label">&larr; back to preview</span>]
 			</button>
+			<div class="flex items-center gap-3">
+				<button
+					class="t-btn-text {!selectedTemplate ? 'opacity-40 cursor-not-allowed' : ''}"
+					onclick={() => {
+						step = 'template-layout';
+					}}
+					disabled={!selectedTemplate}
+				>
+					[<span class="t-btn-label">edit layout &rarr;</span>]
+				</button>
+				<button
+					class="t-btn {!selectedTemplate ? 'opacity-40 cursor-not-allowed' : ''}"
+					onclick={handleGenerate}
+					disabled={!selectedTemplate}
+				>
+					[<span class="underline">generate presentation</span>]
+				</button>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Step 3b: Layout Editor -->
+	{#if step === 'template-layout' && selectedTemplate}
+		<LayoutEditor
+			initialTemplate={selectedTemplate}
+			disabledElements={['image']}
+			onChange={(t) => {
+				selectedTemplate = t;
+			}}
+		/>
+
+		<div class="flex items-center justify-between">
 			<button
-				class="t-btn {!selectedTemplate ? 'opacity-40 cursor-not-allowed' : ''}"
-				onclick={handleGenerate}
-				disabled={!selectedTemplate}
+				class="t-btn-text"
+				onclick={() => {
+					step = 'template-style';
+				}}
 			>
+				[<span class="t-btn-label">&larr; back to style</span>]
+			</button>
+			<button class="t-btn" onclick={handleGenerate}>
 				[<span class="underline">generate presentation</span>]
 			</button>
 		</div>

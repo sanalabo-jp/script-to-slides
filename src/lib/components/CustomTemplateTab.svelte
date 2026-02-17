@@ -204,8 +204,10 @@
 					{#each customTemplates as template, i}
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div
-							onmouseenter={() => {
+							onmouseenter={(e: MouseEvent) => {
 								tooltipTemplate = template;
+								tooltipX = e.clientX;
+								tooltipY = e.clientY;
 								tooltipVisible = true;
 							}}
 							onmousemove={handleMouseMove}
@@ -330,8 +332,10 @@
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div
 							class="self-start"
-							onmouseenter={() => {
+							onmouseenter={(e: MouseEvent) => {
 								tooltipTemplate = previewTemplate;
+								tooltipX = e.clientX;
+								tooltipY = e.clientY;
 								tooltipVisible = true;
 							}}
 							onmousemove={handleMouseMove}

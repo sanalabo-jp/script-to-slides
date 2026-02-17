@@ -5,13 +5,14 @@
 - **대본 형식**: `name[role]: (description) dialogue` — 각 줄이 1개 슬라이드
 - **배포 URL**: https://script-to-slides-five.vercel.app
 - **GitHub**: sanalabo-jp/script-to-slides
-- **현재 버전**: v1.0.1
+- **현재 버전**: v1.1.0
+- **활성 브랜치**: main
 
 ## 브랜치 전략
 - **main**: 안정 릴리스 브랜치. feature/fix 브랜치의 머지 대상
 - **feature/\***, **fix/\***: main에서 분기, 작업 완료 후 main에 --no-ff 병합
 - **dev**: 사용 종료 (beta 기간 한정 사용)
-- **태그**: v1.0.0, v1.0.1 (현재)
+- **태그**: v1.0.0, v1.0.1, v1.0.2, v1.1.0 (현재)
 
 ## 기술 스택
 - **프레임워크**: SvelteKit 5 + Svelte 5 (runes: $state, $derived, $props) + TypeScript
@@ -38,8 +39,9 @@ ParseResult
 
 ## UI 흐름 (4단계)
 ```
-[1] Upload (File 탭 / Manual 탭) → [2] Preview → [3] Template → [4] Generate
+[1] Upload (File 탭 / Manual 탭) → [2] Preview → [3] Template Style → [3b] Template Layout (optional) → [4] Generate
 ```
+- Template Layout: 레이아웃 에디터 (캔버스 드래그 + 리사이즈 + 팔레트 + 속성 패널)
 - File 탭: .txt 파일 드래그 앤 드롭 업로드
 - Manual 탭: 채팅 스타일로 대사를 한 줄씩 직접 입력 (실험적)
 
@@ -51,7 +53,7 @@ src/
 │   │   ├── geminiClient.ts       # Gemini API 호출 + fallbackAnalysis()
 │   │   └── prompts.ts            # AI 프롬프트 (발화자 키, JSON 형식 강제)
 │   ├── generator/
-│   │   ├── slideGenerator.ts     # PPTX 생성 (title + content + ending slides)
+│   │   ├── slideGenerator.ts     # PPTX 생성 (cover + content slides, elements 기반 zIndex 렌더링)
 │   │   ├── themeEngine.ts        # AI 테마 → pptxgenjs config (safeColor 포함)
 │   │   └── visualMapper.ts       # AI 시각요소 → pptxgenjs shapes (safeColor 포함)
 │   ├── parser/
@@ -59,9 +61,11 @@ src/
 │   │   ├── pptxTemplateParser.ts # .pptx → SlideTemplate 추출 (JSZip + DOMParser, 색상 modifier + gradient fallback)
 │   │   └── pptxTemplateUtils.ts  # 파서 순수 함수 + 타입 (색상 modifier, HSL 변환, mergeStyles, buildTemplate 등)
 │   ├── templates/
-│   │   └── templateUtils.ts      # 템플릿 유틸 (deriveCallout2, createBlankCustomTemplate, resolveUniqueName, FONT_FAMILY_PRESETS)
+│   │   ├── presets.ts            # 프리셋 3종 + LECTURE_LAYOUT 좌표 (elements 배열 구조)
+│   │   ├── templateUtils.ts      # 템플릿 유틸 (findElement, getPrimaryStyle, deriveSecondaryFontStyle, createBlankCustomTemplate, resolveUniqueName)
+│   │   └── layoutUtils.ts        # 레이아웃 좌표 변환 (toPixel/toInch, clamp, snap, ELEMENT_COLORS/LABELS, MIN_ELEMENT_SIZE, computeOverlaps, getNextZIndex, normalizeZIndexes, reorderZIndex, mixColors)
 │   ├── types/
-│   │   └── index.ts              # 타입 정의 (ScriptLine, ChatMessage, SpeakerProfile, SlideTemplate 등)
+│   │   └── index.ts              # 타입 정의 (Position, Size, ElementLayout, ElementFontStyle, ElementName, TemplateElement, SlideTemplate 등)
 │   ├── utils/
 │   │   ├── colorUtils.ts         # 화자 시그니처 컬러 생성 (HSL 기반)
 │   │   └── chatTransform.ts      # ChatMessage[] → ParseResult 변환
@@ -77,10 +81,14 @@ src/
 │       ├── TemplateSelector.svelte # 프리셋 탭 (프리셋 목록 + tooltip)
 │       ├── CustomTemplateTab.svelte # 커스텀 탭 (다중 파일 업로드 + 자동 저장 + 템플릿 리스트 + 에디터)
 │       ├── TemplatePreviewCard.svelte # 재사용 4:3 미리보기 카드 (항상 border-2, title bold truncate, desc truncate 1줄, [*] 인라인)
-│       ├── TemplateEditor.svelte  # 인라인 폼 (name/desc/폰트/색상/굵기 + callout2 자동파생)
-│       └── TemplateTooltip.svelte # hover 시 floating 상세 미리보기 (항상 마운트, visible && template으로 제어)
+│       ├── TemplateEditor.svelte  # 인라인 폼 (elements 기반 편집 + callout2 secondary 자동파생)
+│       ├── TemplateTooltip.svelte # hover 시 floating 상세 미리보기 (항상 마운트, visible && template으로 제어)
+│       ├── LayoutEditor.svelte    # 레이아웃 에디터 오케스트레이터 (Canvas + PalettePopover + PropertyPanel, z-index re-rank 통합)
+│       ├── LayoutCanvas.svelte    # 캔버스 — 불투명 배경 + zIndex 라벨 + 혼합색 겹침 해칭 + 드래그 이동/리사이즈(요소별 gridSize snap) + 드롭 타겟 + 우클릭 컨텍스트 메뉴 + outline 선택 + isolate
+│       ├── LayoutPalettePopover.svelte # 캔버스 우측 하단 팝오버 — draggable 리스트 + opacity-35/hover + 빈 캔버스 시 opacity-100 + pulse 애니메이션 + capture phase dismiss
+│       └── LayoutPropertyPanel.svelte # 속성 패널 — h-20 고정 + 요소별 snap 프리셋(off/.05/.1/.25) + 가로 1행 (name | x y | w h | z | snap)
 ├── routes/
-│   ├── +page.svelte              # 메인 페이지 (4단계 UI, File/Manual 탭 토글)
+│   ├── +page.svelte              # 메인 페이지 (4단계 UI, template-style/template-layout 분리)
 │   ├── +layout.svelte            # 레이아웃
 │   └── api/
 │       ├── analyze/+server.ts    # Gemini AI 분석 API (모델 폴백 체인)
@@ -94,7 +102,9 @@ src/
 - TemplateEditor의 `initialTemplate` prop은 `$state.snapshot`으로 unwrap 후 `structuredClone`으로 독립 복사
 
 ## CSS/레이아웃 주의사항
-- **border-width 변경 → 레이아웃 시프트**: 선택/비선택 전환 시 border-width 고정, color만 변경
+- **border-width 변경 → 레이아웃 시프트**: 선택 시 `outline` + `outline-offset:-1px` 사용 (box model 무영향). border는 항상 1px 유지
+- **`isolation: isolate`**: 캔버스에 적용 — 내부 z-index(요소 1-6, 해칭 998)가 외부 팝오버(z:100)와 독립
+- **capture phase 이벤트**: `addEventListener(type, handler, true)` — `stopPropagation()`이 bubble만 차단하므로 팝오버 dismiss에 활용
 - **`field-sizing: content`**: 폼 요소 크기를 값에 맞춰 자동 조절 (Chrome 123+, Edge 123+, Firefox/Safari 미지원)
 - **`w-fit` + `<input>` 기본 크기**: `<input type="text">`는 default `size=20` (~150px). `w-fit` 부모 안에서 `w-full` 사용 시 순환 참조 → 브라우저가 intrinsic size 사용 → 의도치 않은 확장
 - **`flex flex-col` + `align-items: stretch`**: `w-full` 없이도 부모 너비를 채우면서, intrinsic sizing에서는 각 자식의 max-content 기반으로 크기 결정
@@ -162,14 +172,18 @@ src/
 | `image` | 검색/색인 (기능3) | 프론트매터+metadata+토큰 기반 검색 결과 |
 | `detail` | AI 생성 | context 및 image 설명 |
 
-### UI 요소 매핑 (초안)
-- **callout1_label**: speaker 표시, 11pt/#999999/regular
-- **callout2_label**: metadata 표시, 최대 2줄, 10pt
-- **title_label**: summary, 14pt/#434343/bold
-- **body_label**: context, 12pt/#434343/medium
-- **image**: 4:3
-- **caption_label**: detail, 9pt/lightgray/regular
-- **폰트 패밀리**: Noto Sans (전체 공통)
+### UI 요소 → 데이터 소스 매핑 (확정, 구현 완료)
+| ElementName | 데이터 소스 | 표시 규칙 | 상태 |
+|-------------|------------|-----------|------|
+| `callout1` | `metadata` | `key · value, key · value, …` 1줄 | 구현 완료 |
+| `callout2` | `speaker` | name(bold, styles[0]) + role(medium, styles[1]), 듀얼 텍스트 런 | 구현 완료 |
+| `title` | `summary` | 1줄 | nullable (AI/요약 의존) |
+| `body` | `context` | 대사 본문, wrap + lineSpacing | 구현 완료 |
+| `image` | `image` | 4:3 종횡비 | nullable (기능3 검색 의존) |
+| `caption` | `detail` | 좌측 하단, left align | nullable (AI/분석 의존) |
+- `visualHint`: UI 노출 없음, 내부 로직 전용 (이미지 검색 힌트 등)
+- `lineNumber` / `slideNumber`: 슬라이드 표시 보류
+- **폰트 패밀리**: Noto Sans (전체 공통 기본값)
 
 ## 개발 로드맵 (beta-0.0.1 이후)
 
@@ -180,6 +194,14 @@ src/
 - Phase 4: AI 기반 템플릿 추천 (기능5 이후)
 
 ### 기능 2: 슬라이드 컨텐츠 배치 방식 재정의
+- **핵심**: SlideTemplate에 layout(배치 좌표) 정보 추가 + 사용자 정의 레이아웃 에디터
+- **스코프**: Lecture(강의) 타입 전용, ScriptType별 레이아웃은 이후 확장
+- Phase 1 완료: SlideTemplate.elements 배열 + 렌더러 리팩토링 + Lecture 프리셋 레이아웃 + 컴포넌트 전환
+- Phase 2 완료: 레이아웃 에디터 (드래그 이동/리사이즈 + 팝오버 D&D + z-index re-rank + 우클릭 컨텍스트 메뉴 + outline 선택 + 혼합색 겹침 해칭 + isolate + capture phase dismiss + 고정 높이 속성 패널 + 요소별 snap 간격 + 빈 캔버스 팔레트 pulse)
+- Phase 3: .pptx 업로드 시 배치 정보 추출 (기능1 Phase 2 확장)
+- **슬라이드 구성**: 표지(Cover) + 콘텐츠만 (엔딩 슬라이드 제거)
+- **타입 구조**: `SlideTemplate { elements: TemplateElement[] }`, 각 TemplateElement = `{ name: ElementName, layout: ElementLayout, styles: ElementFontStyle[], enabled?: boolean }`, `ElementLayout.gridSize?: number` (snap 간격, 0=off, undefined=0.1")
+- **듀얼 스타일**: callout2(speaker)는 styles[0]=name(primary,bold), styles[1]=role(secondary,derived)
 ### 기능 3: 관련 시각적 정보 색인 로직
 ### 기능 4: 관련 외부 정보 색인 로직
 ### 기능 5: 대사 토큰화 및 핵심 추출
