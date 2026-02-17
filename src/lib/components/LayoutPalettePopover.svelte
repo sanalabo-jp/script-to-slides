@@ -51,7 +51,8 @@
 			class="flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-gray-300
 				text-xs text-gray-700 hover:bg-gray-50 shadow-sm cursor-pointer
 				{isOpen || canvasEmpty ? 'opacity-100' : 'opacity-35'} group-hover/palette:opacity-100
-				transition-opacity duration-200"
+				transition-opacity duration-200
+				{canvasEmpty && !isOpen ? 'animate-guide-attention' : ''}"
 			onclick={() => (isOpen = !isOpen)}
 		>
 			<span>Elements</span>
