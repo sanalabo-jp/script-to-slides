@@ -66,6 +66,7 @@ export interface ElementLayout {
 	position: Position;
 	size: Size;
 	zIndex: number;
+	gridSize?: number; // snap 간격 (inches). undefined = DEFAULT_GRID_SIZE, 0 = snap off
 }
 
 export interface ElementFontStyle {

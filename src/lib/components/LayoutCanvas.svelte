@@ -18,7 +18,6 @@
 	interface Props {
 		elements: TemplateElement[];
 		selectedElement: ElementName | null;
-		snapEnabled: boolean;
 		onSelectElement: (name: ElementName | null) => void;
 		onUpdateElement: (name: ElementName, element: TemplateElement) => void;
 		onDropElement: (name: ElementName, x: number, y: number) => void;
@@ -30,7 +29,6 @@
 	let {
 		elements,
 		selectedElement,
-		snapEnabled,
 		onSelectElement,
 		onUpdateElement,
 		onDropElement,
@@ -118,8 +116,9 @@
 		return elements.find((el) => el.name === name);
 	}
 
-	function maybeSnap(value: number): number {
-		return snapEnabled ? snapToGrid(value, DEFAULT_GRID_SIZE) : value;
+	function maybeSnap(value: number, gridSize: number | undefined): number {
+		const gs = gridSize ?? DEFAULT_GRID_SIZE;
+		return snapToGrid(value, gs);
 	}
 
 	// --- Drag: Move ---
@@ -182,8 +181,8 @@
 		if (!el) return;
 
 		if (dragState.mode === 'move') {
-			const newX = maybeSnap(dragState.startLayout.position.x + dxInch);
-			const newY = maybeSnap(dragState.startLayout.position.y + dyInch);
+			const newX = maybeSnap(dragState.startLayout.position.x + dxInch, el.layout.gridSize);
+			const newY = maybeSnap(dragState.startLayout.position.y + dyInch, el.layout.gridSize);
 			const clamped = clampPosition(newX, newY, el.layout.size.w, el.layout.size.h);
 
 			onUpdateElement(dragState.elementName, {
@@ -200,22 +199,24 @@
 			let w = sl.size.w;
 			let hh = sl.size.h;
 
+			const gs = el.layout.gridSize;
+
 			// Horizontal
 			if (h.includes('e')) {
-				w = maybeSnap(sl.size.w + dxInch);
+				w = maybeSnap(sl.size.w + dxInch, gs);
 			} else if (h.includes('w')) {
 				const newW = sl.size.w - dxInch;
-				w = maybeSnap(newW);
-				x = maybeSnap(sl.position.x + (sl.size.w - w));
+				w = maybeSnap(newW, gs);
+				x = maybeSnap(sl.position.x + (sl.size.w - w), gs);
 			}
 
 			// Vertical
 			if (h.includes('s')) {
-				hh = maybeSnap(sl.size.h + dyInch);
+				hh = maybeSnap(sl.size.h + dyInch, gs);
 			} else if (h.includes('n')) {
 				const newH = sl.size.h - dyInch;
-				hh = maybeSnap(newH);
-				y = maybeSnap(sl.position.y + (sl.size.h - hh));
+				hh = maybeSnap(newH, gs);
+				y = maybeSnap(sl.position.y + (sl.size.h - hh), gs);
 			}
 
 			// Apply constraints
@@ -259,7 +260,7 @@
 		const rect = canvasEl.getBoundingClientRect();
 		const dropX = toInch(e.clientX - rect.left, scale) - el.layout.size.w / 2;
 		const dropY = toInch(e.clientY - rect.top, scale) - el.layout.size.h / 2;
-		onDropElement(name, maybeSnap(dropX), maybeSnap(dropY));
+		onDropElement(name, maybeSnap(dropX, el.layout.gridSize), maybeSnap(dropY, el.layout.gridSize));
 	}
 </script>
 

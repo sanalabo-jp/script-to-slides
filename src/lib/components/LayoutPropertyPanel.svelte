@@ -4,6 +4,7 @@
 		SLIDE_WIDTH,
 		SLIDE_HEIGHT,
 		MIN_ELEMENT_SIZE,
+		DEFAULT_GRID_SIZE,
 		clampPosition,
 		clampSize
 	} from '$lib/templates/layoutUtils';
@@ -11,14 +12,21 @@
 	interface Props {
 		element: TemplateElement | null;
 		enabledCount: number;
-		snapEnabled: boolean;
 		onUpdateElement: (name: ElementName, element: TemplateElement) => void;
-		onSnapToggle: (enabled: boolean) => void;
 	}
 
-	let { element, enabledCount, snapEnabled, onUpdateElement, onSnapToggle }: Props = $props();
+	let { element, enabledCount, onUpdateElement }: Props = $props();
 
 	let maxZIndex = $derived(Math.max(1, enabledCount));
+
+	const SNAP_PRESETS = [
+		{ label: 'off', value: 0 },
+		{ label: '.05', value: 0.05 },
+		{ label: '.1', value: 0.1 },
+		{ label: '.25', value: 0.25 }
+	];
+
+	let currentGridSize = $derived(element?.layout.gridSize ?? DEFAULT_GRID_SIZE);
 
 	function updatePosition(axis: 'x' | 'y', value: number): number {
 		if (!element) return value;
@@ -59,6 +67,15 @@
 		return z;
 	}
 
+	function updateGridSize(value: number) {
+		if (!element) return;
+		const gs = Math.max(0, Math.min(1, value));
+		onUpdateElement(element.name, {
+			...element,
+			layout: { ...element.layout, gridSize: gs }
+		});
+	}
+
 	function handleChange(
 		e: Event,
 		updater: (value: number) => number,
@@ -71,18 +88,9 @@
 </script>
 
 <div class="h-20 overflow-y-auto border border-gray-200 px-3 py-2">
-	<!-- Header + Snap toggle (always visible) -->
-	<div class="flex items-center justify-between mb-2">
+	<!-- Header (always visible) -->
+	<div class="flex items-center mb-2">
 		<span class="text-[10px] text-gray-400 uppercase tracking-wider">Properties</span>
-		<label class="flex items-center gap-1.5 text-xs text-gray-600">
-			<input
-				type="checkbox"
-				checked={snapEnabled}
-				onchange={() => onSnapToggle(!snapEnabled)}
-				class="accent-gray-700"
-			/>
-			Snap (0.1&quot;)
-		</label>
 	</div>
 
 	<!-- Element properties or placeholder -->
@@ -151,6 +159,32 @@
 					class="w-12 px-1 py-0.5 border border-gray-300 text-xs font-mono"
 				/>
 			</label>
+			<span class="flex items-center gap-1 text-xs text-gray-500 shrink-0">
+				snap
+				{#each SNAP_PRESETS as preset}
+					<button
+						class="px-1 py-0.5 text-[10px] font-mono border cursor-pointer {currentGridSize ===
+						preset.value
+							? 'bg-gray-700 text-white border-gray-700'
+							: 'bg-white text-gray-600 border-gray-300 hover:bg-gray-100'}"
+						onclick={() => updateGridSize(preset.value)}
+					>
+						{preset.label}
+					</button>
+				{/each}
+				<input
+					type="number"
+					step="0.01"
+					min="0"
+					max="1"
+					value={currentGridSize}
+					onchange={(e) => {
+						const v = parseFloat((e.target as HTMLInputElement).value) || 0;
+						updateGridSize(v);
+					}}
+					class="w-14 px-1 py-0.5 border border-gray-300 text-xs font-mono"
+				/>
+			</span>
 		</div>
 	{:else}
 		<p class="text-xs text-gray-400 italic">Select an element to edit its properties</p>

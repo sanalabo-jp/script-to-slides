@@ -27,7 +27,6 @@
 	);
 
 	let selectedElement: ElementName | null = $state(null);
-	let snapEnabled = $state(true);
 
 	let selectedEl = $derived(
 		selectedElement ? (template.elements.find((el) => el.name === selectedElement) ?? null) : null
@@ -101,7 +100,6 @@
 		<LayoutCanvas
 			elements={template.elements}
 			{selectedElement}
-			{snapEnabled}
 			onSelectElement={handleSelectElement}
 			onUpdateElement={handleUpdateElement}
 			onDropElement={handleDropElement}
@@ -116,10 +114,6 @@
 	<LayoutPropertyPanel
 		element={selectedEl}
 		enabledCount={template.elements.filter((el) => el.enabled !== false).length}
-		{snapEnabled}
 		onUpdateElement={handleUpdateElement}
-		onSnapToggle={(v) => {
-			snapEnabled = v;
-		}}
 	/>
 </div>
