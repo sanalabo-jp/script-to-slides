@@ -1,6 +1,11 @@
 <script lang="ts">
 	import type { SlideTemplate, TemplateElement, ElementName } from '$lib/types';
-	import { clampPosition } from '$lib/templates/layoutUtils';
+	import {
+		clampPosition,
+		getNextZIndex,
+		normalizeZIndexes,
+		reorderZIndex
+	} from '$lib/templates/layoutUtils';
 	import LayoutCanvas from './LayoutCanvas.svelte';
 	import LayoutPalettePopover from './LayoutPalettePopover.svelte';
 	import LayoutPropertyPanel from './LayoutPropertyPanel.svelte';
@@ -13,8 +18,13 @@
 
 	let { initialTemplate, disabledElements = [], onChange }: Props = $props();
 
-	// Deep clone to avoid mutating the original
-	let template: SlideTemplate = $state(structuredClone($state.snapshot(initialTemplate)));
+	// Deep clone + normalize z-indexes (handles legacy duplicate z-indexes)
+	let template: SlideTemplate = $state(
+		(() => {
+			const cloned = structuredClone($state.snapshot(initialTemplate));
+			return { ...cloned, elements: normalizeZIndexes(cloned.elements) };
+		})()
+	);
 
 	let selectedElement: ElementName | null = $state(null);
 	let snapEnabled = $state(true);
@@ -28,10 +38,23 @@
 	}
 
 	function handleUpdateElement(name: ElementName, updated: TemplateElement) {
-		template = {
-			...template,
-			elements: template.elements.map((el) => (el.name === name ? updated : el))
-		};
+		const existing = template.elements.find((el) => el.name === name);
+		if (existing && existing.layout.zIndex !== updated.layout.zIndex) {
+			// z-index changed: apply re-rank
+			template = {
+				...template,
+				elements: reorderZIndex(
+					template.elements.map((el) => (el.name === name ? updated : el)),
+					name,
+					updated.layout.zIndex
+				)
+			};
+		} else {
+			template = {
+				...template,
+				elements: template.elements.map((el) => (el.name === name ? updated : el))
+			};
+		}
 		onChange(structuredClone($state.snapshot(template)));
 	}
 
@@ -39,17 +62,22 @@
 		const el = template.elements.find((e) => e.name === name);
 		if (!el) return;
 		const clamped = clampPosition(x, y, el.layout.size.w, el.layout.size.h);
-		handleUpdateElement(name, {
-			...el,
-			enabled: true,
-			layout: { ...el.layout, position: clamped }
-		});
+		const nextZ = getNextZIndex(template.elements);
+		const updated = template.elements.map((e) =>
+			e.name === name
+				? { ...e, enabled: true, layout: { ...e.layout, position: clamped, zIndex: nextZ } }
+				: e
+		);
+		template = { ...template, elements: normalizeZIndexes(updated) };
+		onChange(structuredClone($state.snapshot(template)));
 	}
 
 	function handleRemoveElement(name: ElementName) {
 		const el = template.elements.find((e) => e.name === name);
 		if (!el) return;
-		handleUpdateElement(name, { ...el, enabled: false });
+		const updated = template.elements.map((e) => (e.name === name ? { ...e, enabled: false } : e));
+		template = { ...template, elements: normalizeZIndexes(updated) };
+		onChange(structuredClone($state.snapshot(template)));
 		if (selectedElement === name) selectedElement = null;
 	}
 </script>
@@ -80,7 +108,7 @@
 	<!-- Property Panel (horizontal, below canvas) -->
 	<LayoutPropertyPanel
 		element={selectedEl}
-		elementCount={template.elements.length}
+		enabledCount={template.elements.filter((el) => el.enabled !== false).length}
 		onUpdateElement={handleUpdateElement}
 	/>
 </div>

@@ -82,6 +82,76 @@ export function snapToGrid(value: number, gridSize: number): number {
 	return Math.round(value / gridSize) * gridSize;
 }
 
+// === Z-index Management ===
+
+/** Return max z-index + 1 among enabled elements. Returns 1 if none enabled. */
+export function getNextZIndex(elements: TemplateElement[]): number {
+	const enabled = elements.filter((el) => el.enabled !== false);
+	if (enabled.length === 0) return 1;
+	return Math.max(...enabled.map((el) => el.layout.zIndex)) + 1;
+}
+
+/** Normalize z-indexes to dense 1..N ranking. Preserves relative order; ties broken by array order. */
+export function normalizeZIndexes(elements: TemplateElement[]): TemplateElement[] {
+	const enabled = elements.map((el, i) => ({ el, i })).filter(({ el }) => el.enabled !== false);
+
+	// Sort by zIndex, then by original array index for stability
+	enabled.sort((a, b) => a.el.layout.zIndex - b.el.layout.zIndex || a.i - b.i);
+
+	// Build rank map: elementName → new zIndex (1-based)
+	const rankMap = new Map<ElementName, number>();
+	enabled.forEach(({ el }, rank) => {
+		rankMap.set(el.name, rank + 1);
+	});
+
+	return elements.map((el) => {
+		const newZ = rankMap.get(el.name);
+		if (newZ !== undefined && newZ !== el.layout.zIndex) {
+			return { ...el, layout: { ...el.layout, zIndex: newZ } };
+		}
+		return el;
+	});
+}
+
+/** Move elementName to targetRank position, re-rank others to maintain 1..N. */
+export function reorderZIndex(
+	elements: TemplateElement[],
+	elementName: ElementName,
+	targetRank: number
+): TemplateElement[] {
+	const enabled = elements.map((el, i) => ({ el, i })).filter(({ el }) => el.enabled !== false);
+
+	const targetEntry = enabled.find(({ el }) => el.name === elementName);
+	if (!targetEntry) return elements;
+
+	// Sort by current zIndex, then array order
+	enabled.sort((a, b) => a.el.layout.zIndex - b.el.layout.zIndex || a.i - b.i);
+
+	// Remove target from sorted list
+	const sorted = enabled.filter(({ el }) => el.name !== elementName);
+
+	// Clamp targetRank to 1..N
+	const n = enabled.length;
+	const clamped = Math.max(1, Math.min(n, targetRank));
+
+	// Insert at clamped position (0-indexed = clamped - 1)
+	sorted.splice(clamped - 1, 0, targetEntry);
+
+	// Assign 1..N
+	const rankMap = new Map<ElementName, number>();
+	sorted.forEach(({ el }, idx) => {
+		rankMap.set(el.name, idx + 1);
+	});
+
+	return elements.map((el) => {
+		const newZ = rankMap.get(el.name);
+		if (newZ !== undefined && newZ !== el.layout.zIndex) {
+			return { ...el, layout: { ...el.layout, zIndex: newZ } };
+		}
+		return el;
+	});
+}
+
 // === Overlap Detection ===
 
 export interface OverlapRect {

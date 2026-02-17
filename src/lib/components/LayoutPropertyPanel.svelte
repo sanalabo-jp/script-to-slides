@@ -10,13 +10,13 @@
 
 	interface Props {
 		element: TemplateElement | null;
-		elementCount: number;
+		enabledCount: number;
 		onUpdateElement: (name: ElementName, element: TemplateElement) => void;
 	}
 
-	let { element, elementCount, onUpdateElement }: Props = $props();
+	let { element, enabledCount, onUpdateElement }: Props = $props();
 
-	let maxZIndex = $derived(Math.max(1, elementCount));
+	let maxZIndex = $derived(Math.max(1, enabledCount));
 
 	function updatePosition(axis: 'x' | 'y', value: number): number {
 		if (!element) return value;
@@ -49,7 +49,7 @@
 
 	function updateZIndex(value: number): number {
 		if (!element) return value;
-		const z = Math.max(0, Math.min(maxZIndex, Math.round(value)));
+		const z = Math.max(1, Math.min(maxZIndex, Math.round(value)));
 		onUpdateElement(element.name, {
 			...element,
 			layout: { ...element.layout, zIndex: z }
@@ -126,7 +126,7 @@
 			<input
 				type="number"
 				step="1"
-				min="0"
+				min="1"
 				max={maxZIndex}
 				value={element.layout.zIndex}
 				onchange={(e) => handleChange(e, updateZIndex, parseInt)}

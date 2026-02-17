@@ -11,7 +11,10 @@ import {
 	clampPosition,
 	clampSize,
 	snapToGrid,
-	computeOverlaps
+	computeOverlaps,
+	getNextZIndex,
+	normalizeZIndexes,
+	reorderZIndex
 } from './layoutUtils';
 import type { ElementName, TemplateElement } from '$lib/types';
 
@@ -262,5 +265,160 @@ describe('computeOverlaps', () => {
 		const result = computeOverlaps(elements);
 		expect(result).toHaveLength(1);
 		expect(result[0]).toEqual({ x: 2, y: 1, w: 2, h: 2 });
+	});
+});
+
+// === getNextZIndex ===
+
+describe('getNextZIndex', () => {
+	it('returns 1 for empty array', () => {
+		expect(getNextZIndex([])).toBe(1);
+	});
+
+	it('returns 1 when all elements are disabled', () => {
+		const elements = [
+			makeElement('callout1', 0, 0, 2, 2, 3, false),
+			makeElement('callout2', 0, 0, 2, 2, 5, false)
+		];
+		expect(getNextZIndex(elements)).toBe(1);
+	});
+
+	it('returns max zIndex + 1 for enabled elements', () => {
+		const elements = [
+			makeElement('callout1', 0, 0, 2, 2, 3),
+			makeElement('callout2', 0, 0, 2, 2, 5)
+		];
+		expect(getNextZIndex(elements)).toBe(6);
+	});
+
+	it('ignores disabled elements', () => {
+		const elements = [
+			makeElement('callout1', 0, 0, 2, 2, 3),
+			makeElement('callout2', 0, 0, 2, 2, 10, false)
+		];
+		expect(getNextZIndex(elements)).toBe(4);
+	});
+});
+
+// === normalizeZIndexes ===
+
+describe('normalizeZIndexes', () => {
+	it('normalizes duplicates to dense 1..N', () => {
+		const elements = [
+			makeElement('callout1', 0, 0, 2, 2, 1),
+			makeElement('callout2', 0, 0, 2, 2, 1),
+			makeElement('title', 0, 0, 2, 2, 1),
+			makeElement('body', 0, 0, 2, 2, 2),
+			makeElement('image', 0, 0, 2, 2, 3),
+			makeElement('caption', 0, 0, 2, 2, 3)
+		];
+		const result = normalizeZIndexes(elements);
+		expect(result.map((el) => el.layout.zIndex)).toEqual([1, 2, 3, 4, 5, 6]);
+	});
+
+	it('preserves order when already normalized', () => {
+		const elements = [
+			makeElement('callout1', 0, 0, 2, 2, 1),
+			makeElement('callout2', 0, 0, 2, 2, 2),
+			makeElement('title', 0, 0, 2, 2, 3)
+		];
+		const result = normalizeZIndexes(elements);
+		expect(result.map((el) => el.layout.zIndex)).toEqual([1, 2, 3]);
+	});
+
+	it('ignores disabled elements', () => {
+		const elements = [
+			makeElement('callout1', 0, 0, 2, 2, 5),
+			makeElement('callout2', 0, 0, 2, 2, 10, false),
+			makeElement('title', 0, 0, 2, 2, 8)
+		];
+		const result = normalizeZIndexes(elements);
+		expect(result[0].layout.zIndex).toBe(1); // callout1: z5 → 1
+		expect(result[1].layout.zIndex).toBe(10); // callout2: disabled, unchanged
+		expect(result[2].layout.zIndex).toBe(2); // title: z8 → 2
+	});
+
+	it('does not mutate input array', () => {
+		const elements = [
+			makeElement('callout1', 0, 0, 2, 2, 3),
+			makeElement('callout2', 0, 0, 2, 2, 1)
+		];
+		const original = elements.map((el) => el.layout.zIndex);
+		normalizeZIndexes(elements);
+		expect(elements.map((el) => el.layout.zIndex)).toEqual(original);
+	});
+
+	it('handles single enabled element', () => {
+		const elements = [makeElement('callout1', 0, 0, 2, 2, 5)];
+		const result = normalizeZIndexes(elements);
+		expect(result[0].layout.zIndex).toBe(1);
+	});
+});
+
+// === reorderZIndex ===
+
+describe('reorderZIndex', () => {
+	function threeElements() {
+		return [
+			makeElement('callout1', 0, 0, 2, 2, 1),
+			makeElement('callout2', 0, 0, 2, 2, 2),
+			makeElement('title', 0, 0, 2, 2, 3)
+		];
+	}
+
+	it('moves element to rank 1 (lowest)', () => {
+		const result = reorderZIndex(threeElements(), 'title', 1);
+		// title was 3, now 1. Others shift up.
+		expect(result.find((el) => el.name === 'title')!.layout.zIndex).toBe(1);
+		expect(result.find((el) => el.name === 'callout1')!.layout.zIndex).toBe(2);
+		expect(result.find((el) => el.name === 'callout2')!.layout.zIndex).toBe(3);
+	});
+
+	it('moves element to rank N (highest)', () => {
+		const result = reorderZIndex(threeElements(), 'callout1', 3);
+		expect(result.find((el) => el.name === 'callout1')!.layout.zIndex).toBe(3);
+		expect(result.find((el) => el.name === 'callout2')!.layout.zIndex).toBe(1);
+		expect(result.find((el) => el.name === 'title')!.layout.zIndex).toBe(2);
+	});
+
+	it('moves element to middle rank', () => {
+		const result = reorderZIndex(threeElements(), 'title', 2);
+		expect(result.find((el) => el.name === 'callout1')!.layout.zIndex).toBe(1);
+		expect(result.find((el) => el.name === 'title')!.layout.zIndex).toBe(2);
+		expect(result.find((el) => el.name === 'callout2')!.layout.zIndex).toBe(3);
+	});
+
+	it('clamps rank < 1 to 1', () => {
+		const result = reorderZIndex(threeElements(), 'callout2', -5);
+		expect(result.find((el) => el.name === 'callout2')!.layout.zIndex).toBe(1);
+	});
+
+	it('clamps rank > N to N', () => {
+		const result = reorderZIndex(threeElements(), 'callout1', 100);
+		expect(result.find((el) => el.name === 'callout1')!.layout.zIndex).toBe(3);
+	});
+
+	it('returns unchanged when element not found', () => {
+		const elements = threeElements();
+		const result = reorderZIndex(elements, 'image', 1);
+		expect(result).toBe(elements);
+	});
+
+	it('handles single enabled element', () => {
+		const elements = [makeElement('callout1', 0, 0, 2, 2, 1)];
+		const result = reorderZIndex(elements, 'callout1', 1);
+		expect(result[0].layout.zIndex).toBe(1);
+	});
+
+	it('does not affect disabled elements', () => {
+		const elements = [
+			makeElement('callout1', 0, 0, 2, 2, 1),
+			makeElement('callout2', 0, 0, 2, 2, 2),
+			makeElement('title', 0, 0, 2, 2, 99, false)
+		];
+		const result = reorderZIndex(elements, 'callout1', 2);
+		expect(result.find((el) => el.name === 'title')!.layout.zIndex).toBe(99);
+		expect(result.find((el) => el.name === 'callout2')!.layout.zIndex).toBe(1);
+		expect(result.find((el) => el.name === 'callout1')!.layout.zIndex).toBe(2);
 	});
 });

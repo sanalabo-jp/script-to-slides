@@ -11,11 +11,11 @@ const NOTO_SANS = 'Noto Sans';
 // === Default Lecture Layout (LAYOUT_WIDE: 13.33" × 7.5") ===
 
 const LECTURE_LAYOUT: Record<ElementName, ElementLayout> = {
-	callout1: { position: { x: 0.8, y: 0.3 }, size: { w: 11.7, h: 0.35 }, zIndex: 1 },
-	callout2: { position: { x: 0.8, y: 0.7 }, size: { w: 11.7, h: 0.35 }, zIndex: 1 },
-	title: { position: { x: 0.8, y: 1.3 }, size: { w: 11.7, h: 0.5 }, zIndex: 2 },
-	body: { position: { x: 0.8, y: 2.1 }, size: { w: 7.0, h: 4.5 }, zIndex: 3 },
-	image: { position: { x: 8.2, y: 2.1 }, size: { w: 4.33, h: 3.25 }, zIndex: 3 },
+	callout1: { position: { x: 0.8, y: 0.3 }, size: { w: 11.7, h: 0.35 }, zIndex: 2 },
+	callout2: { position: { x: 0.8, y: 0.7 }, size: { w: 11.7, h: 0.35 }, zIndex: 3 },
+	title: { position: { x: 0.8, y: 1.3 }, size: { w: 11.7, h: 0.5 }, zIndex: 6 },
+	body: { position: { x: 0.8, y: 2.1 }, size: { w: 7.0, h: 4.5 }, zIndex: 5 },
+	image: { position: { x: 8.2, y: 2.1 }, size: { w: 4.33, h: 3.25 }, zIndex: 4 },
 	caption: { position: { x: 0.8, y: 6.8 }, size: { w: 11.7, h: 0.4 }, zIndex: 1 }
 };
 
