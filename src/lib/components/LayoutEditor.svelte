@@ -94,13 +94,7 @@
 </script>
 
 <div class="space-y-3">
-	<div class="flex items-center justify-between">
-		<h3 class="text-base font-semibold text-gray-800">Layout Editor</h3>
-		<label class="flex items-center gap-1.5 text-xs text-gray-600">
-			<input type="checkbox" bind:checked={snapEnabled} class="accent-gray-700" />
-			Snap to grid (0.1&quot;)
-		</label>
-	</div>
+	<h3 class="text-base font-semibold text-gray-800">Layout Editor</h3>
 
 	<!-- Canvas + Popover wrapper -->
 	<div class="relative">
@@ -118,10 +112,14 @@
 		<LayoutPalettePopover elements={template.elements} {disabledElements} />
 	</div>
 
-	<!-- Property Panel (horizontal, below canvas) -->
+	<!-- Property Panel (fixed height, below canvas) -->
 	<LayoutPropertyPanel
 		element={selectedEl}
 		enabledCount={template.elements.filter((el) => el.enabled !== false).length}
+		{snapEnabled}
 		onUpdateElement={handleUpdateElement}
+		onSnapToggle={(v) => {
+			snapEnabled = v;
+		}}
 	/>
 </div>
