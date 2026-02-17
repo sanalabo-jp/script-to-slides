@@ -28,39 +28,37 @@
 		isDragging = false;
 	}
 
-	function handleDocumentPointerDown(e: PointerEvent) {
-		if (!isOpen || isDragging) return;
-		if (popoverEl?.contains(e.target as Node)) return;
-		if (buttonEl?.contains(e.target as Node)) return;
-		isOpen = false;
-	}
-
 	$effect(() => {
 		if (isOpen) {
-			const timer = setTimeout(() => {
-				document.addEventListener('pointerdown', handleDocumentPointerDown);
-			}, 0);
-			return () => {
-				clearTimeout(timer);
-				document.removeEventListener('pointerdown', handleDocumentPointerDown);
+			const handler = (e: PointerEvent) => {
+				if (isDragging) return;
+				if (popoverEl?.contains(e.target as Node)) return;
+				if (buttonEl?.contains(e.target as Node)) return;
+				isOpen = false;
 			};
+			document.addEventListener('pointerdown', handler, true);
+			return () => document.removeEventListener('pointerdown', handler, true);
 		}
 	});
 </script>
 
 <div class="absolute bottom-3 right-3" style="z-index:100;">
-	<!-- Toggle button -->
-	<button
-		bind:this={buttonEl}
-		class="flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-gray-300
-			text-xs text-gray-700 hover:bg-gray-50 shadow-sm cursor-pointer"
-		onclick={() => (isOpen = !isOpen)}
-	>
-		<span>Elements</span>
-		{#if unplacedCount > 0}
-			<span class="bg-gray-700 text-white text-[10px] px-1 rounded-sm">{unplacedCount}</span>
-		{/if}
-	</button>
+	<!-- Hover area wrapper: p-3 expands hover target, -m-3 cancels layout shift -->
+	<div class="p-3 -m-3 group/palette">
+		<button
+			bind:this={buttonEl}
+			class="flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-gray-300
+				text-xs text-gray-700 hover:bg-gray-50 shadow-sm cursor-pointer
+				{isOpen ? 'opacity-100' : 'opacity-35'} group-hover/palette:opacity-100
+				transition-opacity duration-200"
+			onclick={() => (isOpen = !isOpen)}
+		>
+			<span>Elements</span>
+			{#if unplacedCount > 0}
+				<span class="bg-gray-700 text-white text-[10px] px-1 rounded-sm">{unplacedCount}</span>
+			{/if}
+		</button>
+	</div>
 
 	<!-- Popover (opens above button) -->
 	{#if isOpen}

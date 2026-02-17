@@ -266,7 +266,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	bind:this={canvasEl}
-	class="relative w-full aspect-[1333/750] bg-gray-100 border border-gray-300 overflow-hidden select-none"
+	class="relative isolate w-full aspect-[1333/750] bg-gray-100 border border-gray-300 overflow-hidden select-none"
 	onclick={handleCanvasClick}
 	onpointermove={handlePointerMove}
 	onpointerup={handlePointerUp}
