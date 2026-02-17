@@ -6,7 +6,7 @@
 - **배포 URL**: https://script-to-slides-five.vercel.app
 - **GitHub**: sanalabo-jp/script-to-slides
 - **현재 버전**: v1.0.2
-- **활성 브랜치**: `feature/slide-layout-system` (기능2 Phase 1+2 + 2차 UX 개선)
+- **활성 브랜치**: `feature/slide-layout-system` (기능2 Phase 1+2 + 3차 UX 개선)
 
 ## 브랜치 전략
 - **main**: 안정 릴리스 브랜치. feature/fix 브랜치의 머지 대상
@@ -84,9 +84,9 @@ src/
 │       ├── TemplateEditor.svelte  # 인라인 폼 (elements 기반 편집 + callout2 secondary 자동파생)
 │       ├── TemplateTooltip.svelte # hover 시 floating 상세 미리보기 (항상 마운트, visible && template으로 제어)
 │       ├── LayoutEditor.svelte    # 레이아웃 에디터 오케스트레이터 (Canvas + PalettePopover + PropertyPanel, z-index re-rank 통합)
-│       ├── LayoutCanvas.svelte    # 캔버스 — 불투명 배경 + zIndex 라벨 + 혼합색 겹침 해칭 + 드래그 이동/리사이즈 + 드롭 타겟 + 우클릭 컨텍스트 메뉴 + outline 선택 + isolate
-│       ├── LayoutPalettePopover.svelte # 캔버스 우측 하단 팝오버 — draggable 리스트 + opacity-35/hover + capture phase dismiss
-│       └── LayoutPropertyPanel.svelte # 속성 패널 — h-20 고정 + snap toggle + 가로 1행 (name | x y | w h | z)
+│       ├── LayoutCanvas.svelte    # 캔버스 — 불투명 배경 + zIndex 라벨 + 혼합색 겹침 해칭 + 드래그 이동/리사이즈(요소별 gridSize snap) + 드롭 타겟 + 우클릭 컨텍스트 메뉴 + outline 선택 + isolate
+│       ├── LayoutPalettePopover.svelte # 캔버스 우측 하단 팝오버 — draggable 리스트 + opacity-35/hover + 빈 캔버스 시 opacity-100 + pulse 애니메이션 + capture phase dismiss
+│       └── LayoutPropertyPanel.svelte # 속성 패널 — h-20 고정 + 요소별 snap 프리셋(off/.05/.1/.25) + 가로 1행 (name | x y | w h | z | snap)
 ├── routes/
 │   ├── +page.svelte              # 메인 페이지 (4단계 UI, template-style/template-layout 분리)
 │   ├── +layout.svelte            # 레이아웃
@@ -197,10 +197,10 @@ src/
 - **핵심**: SlideTemplate에 layout(배치 좌표) 정보 추가 + 사용자 정의 레이아웃 에디터
 - **스코프**: Lecture(강의) 타입 전용, ScriptType별 레이아웃은 이후 확장
 - Phase 1 완료: SlideTemplate.elements 배열 + 렌더러 리팩토링 + Lecture 프리셋 레이아웃 + 컴포넌트 전환
-- Phase 2 완료: 레이아웃 에디터 (드래그 이동/리사이즈 + 팝오버 D&D + z-index re-rank + 우클릭 컨텍스트 메뉴 + outline 선택 + 혼합색 겹침 해칭 + isolate + capture phase dismiss + 고정 높이 속성 패널)
+- Phase 2 완료: 레이아웃 에디터 (드래그 이동/리사이즈 + 팝오버 D&D + z-index re-rank + 우클릭 컨텍스트 메뉴 + outline 선택 + 혼합색 겹침 해칭 + isolate + capture phase dismiss + 고정 높이 속성 패널 + 요소별 snap 간격 + 빈 캔버스 팔레트 pulse)
 - Phase 3: .pptx 업로드 시 배치 정보 추출 (기능1 Phase 2 확장)
 - **슬라이드 구성**: 표지(Cover) + 콘텐츠만 (엔딩 슬라이드 제거)
-- **타입 구조**: `SlideTemplate { elements: TemplateElement[] }`, 각 TemplateElement = `{ name: ElementName, layout: ElementLayout, styles: ElementFontStyle[], enabled?: boolean }`
+- **타입 구조**: `SlideTemplate { elements: TemplateElement[] }`, 각 TemplateElement = `{ name: ElementName, layout: ElementLayout, styles: ElementFontStyle[], enabled?: boolean }`, `ElementLayout.gridSize?: number` (snap 간격, 0=off, undefined=0.1")
 - **듀얼 스타일**: callout2(speaker)는 styles[0]=name(primary,bold), styles[1]=role(secondary,derived)
 ### 기능 3: 관련 시각적 정보 색인 로직
 ### 기능 4: 관련 외부 정보 색인 로직
