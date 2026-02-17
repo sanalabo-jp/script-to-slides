@@ -11,7 +11,8 @@
 		clampSize,
 		snapToGrid,
 		DEFAULT_GRID_SIZE,
-		computeOverlaps
+		computeOverlaps,
+		mixColors
 	} from '$lib/templates/layoutUtils';
 
 	interface Props {
@@ -321,6 +322,7 @@
 		<!-- Overlap hatching layer -->
 		{@const overlaps = computeOverlaps(elements)}
 		{#each overlaps as rect}
+			{@const mixed = mixColors(ELEMENT_COLORS[rect.elementA], ELEMENT_COLORS[rect.elementB])}
 			<div
 				class="absolute pointer-events-none"
 				style="left:{toPixel(rect.x, scale)}px;top:{toPixel(rect.y, scale)}px;
@@ -328,7 +330,7 @@
 					z-index:998;
 					background:repeating-linear-gradient(45deg,
 						transparent, transparent 3px,
-						rgba(239,68,68,0.3) 3px, rgba(239,68,68,0.3) 5px);"
+						{mixed}33 3px, {mixed}33 5px);"
 			></div>
 		{/each}
 	{/if}

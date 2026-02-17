@@ -14,7 +14,8 @@ import {
 	computeOverlaps,
 	getNextZIndex,
 	normalizeZIndexes,
-	reorderZIndex
+	reorderZIndex,
+	mixColors
 } from './layoutUtils';
 import type { ElementName, TemplateElement } from '$lib/types';
 
@@ -199,60 +200,95 @@ describe('computeOverlaps', () => {
 		expect(computeOverlaps([])).toEqual([]);
 	});
 
-	it('returns empty array when overlapping elements have different zIndex', () => {
+	it('detects overlap between elements with different zIndex', () => {
 		const elements = [
 			makeElement('callout1', 0, 0, 5, 3, 1),
 			makeElement('callout2', 2, 1, 5, 3, 2)
 		];
-		expect(computeOverlaps(elements)).toEqual([]);
+		const result = computeOverlaps(elements);
+		expect(result).toHaveLength(1);
+		expect(result[0]).toEqual({
+			x: 2,
+			y: 1,
+			w: 3,
+			h: 2,
+			elementA: 'callout1',
+			elementB: 'callout2'
+		});
 	});
 
-	it('returns empty array when same zIndex elements do not overlap', () => {
+	it('returns empty array when elements do not overlap', () => {
 		const elements = [
 			makeElement('callout1', 0, 0, 2, 2, 1),
-			makeElement('callout2', 5, 5, 2, 2, 1)
+			makeElement('callout2', 5, 5, 2, 2, 2)
 		];
 		expect(computeOverlaps(elements)).toEqual([]);
 	});
 
-	it('returns intersection rect for same zIndex partial overlap', () => {
+	it('returns intersection rect for partial overlap', () => {
 		const elements = [
 			makeElement('callout1', 0, 0, 4, 3, 1),
-			makeElement('callout2', 2, 1, 4, 3, 1)
+			makeElement('callout2', 2, 1, 4, 3, 2)
 		];
 		const result = computeOverlaps(elements);
 		expect(result).toHaveLength(1);
-		expect(result[0]).toEqual({ x: 2, y: 1, w: 2, h: 2 });
+		expect(result[0]).toEqual({
+			x: 2,
+			y: 1,
+			w: 2,
+			h: 2,
+			elementA: 'callout1',
+			elementB: 'callout2'
+		});
 	});
 
-	it('returns inner rect for same zIndex containment', () => {
+	it('returns inner rect for containment', () => {
 		const elements = [
 			makeElement('callout1', 0, 0, 10, 7, 1),
-			makeElement('callout2', 2, 1, 3, 2, 1)
+			makeElement('callout2', 2, 1, 3, 2, 2)
 		];
 		const result = computeOverlaps(elements);
 		expect(result).toHaveLength(1);
-		expect(result[0]).toEqual({ x: 2, y: 1, w: 3, h: 2 });
+		expect(result[0]).toEqual({
+			x: 2,
+			y: 1,
+			w: 3,
+			h: 2,
+			elementA: 'callout1',
+			elementB: 'callout2'
+		});
 	});
 
 	it('returns multiple overlaps: A-B and B-C but not A-C', () => {
 		const elements = [
 			makeElement('callout1', 0, 0, 3, 2, 1),
-			makeElement('callout2', 2, 0, 3, 2, 1),
-			makeElement('title', 4, 0, 3, 2, 1)
+			makeElement('callout2', 2, 0, 3, 2, 2),
+			makeElement('title', 4, 0, 3, 2, 3)
 		];
 		const result = computeOverlaps(elements);
 		expect(result).toHaveLength(2);
-		// A-B overlap: x=2, y=0, w=1, h=2
-		expect(result).toContainEqual({ x: 2, y: 0, w: 1, h: 2 });
-		// B-C overlap: x=4, y=0, w=1, h=2
-		expect(result).toContainEqual({ x: 4, y: 0, w: 1, h: 2 });
+		expect(result).toContainEqual({
+			x: 2,
+			y: 0,
+			w: 1,
+			h: 2,
+			elementA: 'callout1',
+			elementB: 'callout2'
+		});
+		expect(result).toContainEqual({
+			x: 4,
+			y: 0,
+			w: 1,
+			h: 2,
+			elementA: 'callout2',
+			elementB: 'title'
+		});
 	});
 
 	it('excludes enabled: false elements', () => {
 		const elements = [
 			makeElement('callout1', 0, 0, 4, 3, 1, true),
-			makeElement('callout2', 2, 1, 4, 3, 1, false)
+			makeElement('callout2', 2, 1, 4, 3, 2, false)
 		];
 		expect(computeOverlaps(elements)).toEqual([]);
 	});
@@ -260,11 +296,47 @@ describe('computeOverlaps', () => {
 	it('includes enabled: undefined elements (treated as enabled)', () => {
 		const elements = [
 			makeElement('callout1', 0, 0, 4, 3, 1, undefined),
-			makeElement('callout2', 2, 1, 4, 3, 1, undefined)
+			makeElement('callout2', 2, 1, 4, 3, 2, undefined)
 		];
 		const result = computeOverlaps(elements);
 		expect(result).toHaveLength(1);
-		expect(result[0]).toEqual({ x: 2, y: 1, w: 2, h: 2 });
+		expect(result[0]).toEqual({
+			x: 2,
+			y: 1,
+			w: 2,
+			h: 2,
+			elementA: 'callout1',
+			elementB: 'callout2'
+		});
+	});
+});
+
+// === mixColors ===
+
+describe('mixColors', () => {
+	it('mixes black and white to gray', () => {
+		expect(mixColors('#000000', '#ffffff')).toBe('#808080');
+	});
+
+	it('returns same color when both inputs are identical', () => {
+		expect(mixColors('#94a3b8', '#94a3b8')).toBe('#94a3b8');
+	});
+
+	it('mixes two ELEMENT_COLORS correctly', () => {
+		// slate-400 (#94a3b8) + zinc-400 (#a1a1aa) → average
+		const result = mixColors('#94a3b8', '#a1a1aa');
+		// R: (0x94+0xa1)/2 = (148+161)/2 = 154.5 → 155 = 0x9b
+		// G: (0xa3+0xa1)/2 = (163+161)/2 = 162 = 0xa2
+		// B: (0xb8+0xaa)/2 = (184+170)/2 = 177 = 0xb1
+		expect(result).toBe('#9ba2b1');
+	});
+
+	it('handles colors without # prefix', () => {
+		expect(mixColors('000000', 'ffffff')).toBe('#808080');
+	});
+
+	it('mixes red and blue to purple', () => {
+		expect(mixColors('#ff0000', '#0000ff')).toBe('#800080');
 	});
 });
 

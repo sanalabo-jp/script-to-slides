@@ -152,6 +152,20 @@ export function reorderZIndex(
 	});
 }
 
+// === Color Mixing ===
+
+/** Mix two hex colors by averaging their RGB channels. */
+export function mixColors(colorA: string, colorB: string): string {
+	const parse = (hex: string) => {
+		const h = hex.replace('#', '');
+		return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+	};
+	const [r1, g1, b1] = parse(colorA);
+	const [r2, g2, b2] = parse(colorB);
+	const toHex = (n: number) => Math.round(n).toString(16).padStart(2, '0');
+	return `#${toHex((r1 + r2) / 2)}${toHex((g1 + g2) / 2)}${toHex((b1 + b2) / 2)}`;
+}
+
 // === Overlap Detection ===
 
 export interface OverlapRect {
@@ -159,11 +173,13 @@ export interface OverlapRect {
 	y: number;
 	w: number;
 	h: number;
+	elementA: ElementName;
+	elementB: ElementName;
 }
 
 /**
- * Detect AABB overlaps between enabled elements sharing the same zIndex.
- * Returns intersection rectangles for each overlapping pair.
+ * Detect AABB overlaps between all enabled element pairs.
+ * Returns intersection rectangles with element names for color mixing.
  */
 export function computeOverlaps(elements: TemplateElement[]): OverlapRect[] {
 	const enabled = elements.filter((el) => el.enabled !== false);
@@ -173,7 +189,6 @@ export function computeOverlaps(elements: TemplateElement[]): OverlapRect[] {
 		for (let j = i + 1; j < enabled.length; j++) {
 			const a = enabled[i];
 			const b = enabled[j];
-			if (a.layout.zIndex !== b.layout.zIndex) continue;
 
 			const x = Math.max(a.layout.position.x, b.layout.position.x);
 			const y = Math.max(a.layout.position.y, b.layout.position.y);
@@ -189,7 +204,7 @@ export function computeOverlaps(elements: TemplateElement[]): OverlapRect[] {
 			const h = bottom - y;
 
 			if (w > 0 && h > 0) {
-				overlaps.push({ x, y, w, h });
+				overlaps.push({ x, y, w, h, elementA: a.name, elementB: b.name });
 			}
 		}
 	}
