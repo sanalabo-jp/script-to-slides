@@ -6,7 +6,7 @@
 - **배포 URL**: https://script-to-slides-five.vercel.app
 - **GitHub**: sanalabo-jp/script-to-slides
 - **현재 버전**: v1.0.2
-- **활성 브랜치**: `feature/slide-layout-system` (기능2 Phase 1+2)
+- **활성 브랜치**: `feature/slide-layout-system` (기능2 Phase 1+2 + 2차 UX 개선)
 
 ## 브랜치 전략
 - **main**: 안정 릴리스 브랜치. feature/fix 브랜치의 머지 대상
@@ -63,7 +63,7 @@ src/
 │   ├── templates/
 │   │   ├── presets.ts            # 프리셋 3종 + LECTURE_LAYOUT 좌표 (elements 배열 구조)
 │   │   ├── templateUtils.ts      # 템플릿 유틸 (findElement, getPrimaryStyle, deriveSecondaryFontStyle, createBlankCustomTemplate, resolveUniqueName)
-│   │   └── layoutUtils.ts        # 레이아웃 좌표 변환 (toPixel/toInch, clamp, snap, ELEMENT_COLORS, ELEMENT_LABELS, MIN_ELEMENT_SIZE, computeOverlaps)
+│   │   └── layoutUtils.ts        # 레이아웃 좌표 변환 (toPixel/toInch, clamp, snap, ELEMENT_COLORS/LABELS, MIN_ELEMENT_SIZE, computeOverlaps, getNextZIndex, normalizeZIndexes, reorderZIndex, mixColors)
 │   ├── types/
 │   │   └── index.ts              # 타입 정의 (Position, Size, ElementLayout, ElementFontStyle, ElementName, TemplateElement, SlideTemplate 등)
 │   ├── utils/
@@ -83,10 +83,10 @@ src/
 │       ├── TemplatePreviewCard.svelte # 재사용 4:3 미리보기 카드 (항상 border-2, title bold truncate, desc truncate 1줄, [*] 인라인)
 │       ├── TemplateEditor.svelte  # 인라인 폼 (elements 기반 편집 + callout2 secondary 자동파생)
 │       ├── TemplateTooltip.svelte # hover 시 floating 상세 미리보기 (항상 마운트, visible && template으로 제어)
-│       ├── LayoutEditor.svelte    # 레이아웃 에디터 오케스트레이터 (Canvas + PalettePopover + PropertyPanel)
-│       ├── LayoutCanvas.svelte    # 캔버스 — 불투명 배경 + zIndex 라벨 + 겹침 해칭 + 드래그 이동/리사이즈 + 드롭 타겟 + X 제거
-│       ├── LayoutPalettePopover.svelte # 캔버스 우측 하단 팝오버 — 미배치 요소 draggable 리스트 + disabled 회색 처리
-│       └── LayoutPropertyPanel.svelte # 속성 패널 — 가로 1행 (name | x y | w h | z)
+│       ├── LayoutEditor.svelte    # 레이아웃 에디터 오케스트레이터 (Canvas + PalettePopover + PropertyPanel, z-index re-rank 통합)
+│       ├── LayoutCanvas.svelte    # 캔버스 — 불투명 배경 + zIndex 라벨 + 혼합색 겹침 해칭 + 드래그 이동/리사이즈 + 드롭 타겟 + 우클릭 컨텍스트 메뉴 + outline 선택 + isolate
+│       ├── LayoutPalettePopover.svelte # 캔버스 우측 하단 팝오버 — draggable 리스트 + opacity-35/hover + capture phase dismiss
+│       └── LayoutPropertyPanel.svelte # 속성 패널 — h-20 고정 + snap toggle + 가로 1행 (name | x y | w h | z)
 ├── routes/
 │   ├── +page.svelte              # 메인 페이지 (4단계 UI, template-style/template-layout 분리)
 │   ├── +layout.svelte            # 레이아웃
@@ -102,7 +102,9 @@ src/
 - TemplateEditor의 `initialTemplate` prop은 `$state.snapshot`으로 unwrap 후 `structuredClone`으로 독립 복사
 
 ## CSS/레이아웃 주의사항
-- **border-width 변경 → 레이아웃 시프트**: 선택/비선택 전환 시 border-width 고정, color만 변경
+- **border-width 변경 → 레이아웃 시프트**: 선택 시 `outline` + `outline-offset:-1px` 사용 (box model 무영향). border는 항상 1px 유지
+- **`isolation: isolate`**: 캔버스에 적용 — 내부 z-index(요소 1-6, 해칭 998)가 외부 팝오버(z:100)와 독립
+- **capture phase 이벤트**: `addEventListener(type, handler, true)` — `stopPropagation()`이 bubble만 차단하므로 팝오버 dismiss에 활용
 - **`field-sizing: content`**: 폼 요소 크기를 값에 맞춰 자동 조절 (Chrome 123+, Edge 123+, Firefox/Safari 미지원)
 - **`w-fit` + `<input>` 기본 크기**: `<input type="text">`는 default `size=20` (~150px). `w-fit` 부모 안에서 `w-full` 사용 시 순환 참조 → 브라우저가 intrinsic size 사용 → 의도치 않은 확장
 - **`flex flex-col` + `align-items: stretch`**: `w-full` 없이도 부모 너비를 채우면서, intrinsic sizing에서는 각 자식의 max-content 기반으로 크기 결정
@@ -195,7 +197,7 @@ src/
 - **핵심**: SlideTemplate에 layout(배치 좌표) 정보 추가 + 사용자 정의 레이아웃 에디터
 - **스코프**: Lecture(강의) 타입 전용, ScriptType별 레이아웃은 이후 확장
 - Phase 1 완료: SlideTemplate.elements 배열 + 렌더러 리팩토링 + Lecture 프리셋 레이아웃 + 컴포넌트 전환
-- Phase 2 완료: 레이아웃 에디터 (LayoutEditor + LayoutCanvas + LayoutPalettePopover + LayoutPropertyPanel, 드래그 이동/리사이즈 + 팝오버 드래그 앤 드롭 + X 제거 + 불투명 배경/zIndex 라벨/겹침 해칭 + 가로 속성 패널)
+- Phase 2 완료: 레이아웃 에디터 (드래그 이동/리사이즈 + 팝오버 D&D + z-index re-rank + 우클릭 컨텍스트 메뉴 + outline 선택 + 혼합색 겹침 해칭 + isolate + capture phase dismiss + 고정 높이 속성 패널)
 - Phase 3: .pptx 업로드 시 배치 정보 추출 (기능1 Phase 2 확장)
 - **슬라이드 구성**: 표지(Cover) + 콘텐츠만 (엔딩 슬라이드 제거)
 - **타입 구조**: `SlideTemplate { elements: TemplateElement[] }`, 각 TemplateElement = `{ name: ElementName, layout: ElementLayout, styles: ElementFontStyle[], enabled?: boolean }`
