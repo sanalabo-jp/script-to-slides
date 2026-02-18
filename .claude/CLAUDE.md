@@ -83,10 +83,10 @@ src/
 │       ├── TemplatePreviewCard.svelte # 재사용 4:3 미리보기 카드 (항상 border-2, title bold truncate, desc truncate 1줄, [*] 인라인)
 │       ├── TemplateEditor.svelte  # 인라인 폼 (elements 기반 편집 + callout2 secondary 자동파생)
 │       ├── TemplateTooltip.svelte # hover 시 floating 상세 미리보기 (항상 마운트, visible && template으로 제어)
-│       ├── LayoutEditor.svelte    # 레이아웃 에디터 오케스트레이터 (Canvas + PalettePopover + PropertyPanel, z-index re-rank 통합)
+│       ├── LayoutEditor.svelte    # 레이아웃 에디터 오케스트레이터 (수평 flex: Canvas flex-1 + 사이드바 w-[20%], ResizeObserver 높이 동기화, z-index re-rank 통합)
 │       ├── LayoutCanvas.svelte    # 캔버스 — 불투명 배경 + zIndex 라벨 + 혼합색 겹침 해칭 + 드래그 이동/리사이즈(요소별 gridSize snap) + 드롭 타겟 + 우클릭 컨텍스트 메뉴 + outline 선택 + isolate
-│       ├── LayoutPalettePopover.svelte # 캔버스 우측 하단 팝오버 — draggable 리스트 + opacity-35/hover + 빈 캔버스 시 opacity-100 + pulse 애니메이션 + capture phase dismiss
-│       └── LayoutPropertyPanel.svelte # 속성 패널 — h-20 고정 + 요소별 snap 프리셋(off/.05/.1/.25) + 가로 1행 (name | x y | w h | z | snap)
+│       ├── LayoutPalettePopover.svelte # 캔버스 우측 하단 팝오버 — draggable 리스트 + opacity-35/hover + 빈 캔버스 시 opacity-100 + pulse + flash pulse(요소 제거 시 1회) + capture phase dismiss
+│       └── LayoutPropertyPanel.svelte # 속성 패널 — 캔버스 우측 사이드바(h-full) + 세로 Figma 레이아웃 (Element name + ELEMENT_COLORS dot / Position & Size / Snap + custom 토글) + t-input-border
 ├── routes/
 │   ├── +page.svelte              # 메인 페이지 (4단계 UI, template-style/template-layout 분리)
 │   ├── +layout.svelte            # 레이아웃
@@ -125,7 +125,7 @@ src/
 ## UI 디자인 컨벤션
 - **테마**: macOS Terminal 스타일 모노크롬 (font-mono, gray 팔레트)
 - **CSS 클래스**: `@layer components`에 `.t-card`, `.t-btn`, `.t-btn-text`, `.t-code` 등 정의
-- **애니메이션**: `animate-guide-attention` (비대칭 1.8s, gray-900 피크), `animate-cell-in` (셀 슬라이드인)
+- **애니메이션**: `animate-guide-attention` (비대칭 1.8s, gray-900 피크), `animate-palette-attention` (팔레트 전용 1.8s pulse), `animate-palette-flash` (전용 palette-flash 0.8s 1회), `animate-cell-in` (셀 슬라이드인)
 - **탭 스타일**: `.input-tab`, `.input-tab-active` (File/Manual 전환용)
 - **모달**: `.modal-overlay`, `.modal-card`
 - **버튼 그룹**: `[del] / [edit]` 순서, `/` 구분자, edit는 `font-bold`
