@@ -5,14 +5,14 @@
 - **대본 형식**: `name[role]: (description) dialogue` — 각 줄이 1개 슬라이드
 - **배포 URL**: https://script-to-slides-five.vercel.app
 - **GitHub**: sanalabo-jp/script-to-slides
-- **현재 버전**: v1.1.0
+- **현재 버전**: v1.1.1
 - **활성 브랜치**: main
 
 ## 브랜치 전략
 - **main**: 안정 릴리스 브랜치. feature/fix 브랜치의 머지 대상
 - **feature/\***, **fix/\***: main에서 분기, 작업 완료 후 main에 --no-ff 병합
 - **dev**: 사용 종료 (beta 기간 한정 사용)
-- **태그**: v1.0.0, v1.0.1, v1.0.2, v1.1.0 (현재)
+- **태그**: v1.0.0, v1.0.1, v1.0.2, v1.1.0, v1.1.1 (현재)
 
 ## 기술 스택
 - **프레임워크**: SvelteKit 5 + Svelte 5 (runes: $state, $derived, $props) + TypeScript
