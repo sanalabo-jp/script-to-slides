@@ -159,3 +159,30 @@
 .animate-guide-attention {
 	animation: guide-attention 1.8s ease-out infinite;
 }
+
+@keyframes palette-attention {
+	0% {
+		border-color: var(--color-gray-300);
+		background-color: var(--color-white);
+	}
+	15% {
+		border-color: var(--color-gray-900);
+		background-color: var(--color-gray-300);
+	}
+	70% {
+		border-color: var(--color-gray-300);
+		background-color: var(--color-white);
+	}
+	100% {
+		border-color: var(--color-gray-300);
+		background-color: var(--color-white);
+	}
+}
+
+.animate-palette-attention {
+	animation: palette-attention 1.8s ease-out infinite;
+}
+
+.animate-palette-flash {
+	animation: palette-attention 1.8s ease-out 1;
+}

@@ -17,6 +17,22 @@
 	let paletteElements = $derived(elements.filter((el) => el.enabled === false));
 	let unplacedCount = $derived(paletteElements.length);
 	let canvasEmpty = $derived(elements.every((el) => el.enabled === false));
+	let flashPulse = $state(false);
+
+	// Detect element removal → one-time flash pulse
+	let _prevUnplacedCount: number | undefined;
+	$effect(() => {
+		const current = unplacedCount;
+		const empty = canvasEmpty;
+		if (_prevUnplacedCount !== undefined && current > _prevUnplacedCount && !empty) {
+			flashPulse = true;
+		}
+		_prevUnplacedCount = current;
+	});
+
+	function handleFlashEnd() {
+		flashPulse = false;
+	}
 
 	function handleDragStart(e: DragEvent, name: ElementName) {
 		if (!e.dataTransfer) return;
@@ -50,10 +66,12 @@
 			bind:this={buttonEl}
 			class="flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-gray-300
 				text-xs text-gray-700 hover:bg-gray-50 shadow-sm cursor-pointer
-				{isOpen || canvasEmpty ? 'opacity-100' : 'opacity-35'} group-hover/palette:opacity-100
+				{isOpen || canvasEmpty || flashPulse ? 'opacity-100' : 'opacity-35'} group-hover/palette:opacity-100
 				transition-opacity duration-200
-				{canvasEmpty && !isOpen ? 'animate-guide-attention' : ''}"
+				{canvasEmpty && !isOpen ? 'animate-palette-attention' : ''}
+				{flashPulse && !canvasEmpty ? 'animate-palette-flash' : ''}"
 			onclick={() => (isOpen = !isOpen)}
+			onanimationend={handleFlashEnd}
 		>
 			<span>Elements</span>
 			{#if unplacedCount > 0}
