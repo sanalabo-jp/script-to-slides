@@ -27,6 +27,20 @@
 	);
 
 	let selectedElement: ElementName | null = $state(null);
+	let canvasWrapperEl: HTMLDivElement | undefined = $state();
+	let canvasHeight: number = $state(0);
+
+	// Observe canvas wrapper height for sidebar sync
+	$effect(() => {
+		if (!canvasWrapperEl) return;
+		const ro = new ResizeObserver((entries) => {
+			for (const entry of entries) {
+				canvasHeight = entry.contentRect.height;
+			}
+		});
+		ro.observe(canvasWrapperEl);
+		return () => ro.disconnect();
+	});
 
 	let selectedEl = $derived(
 		selectedElement ? (template.elements.find((el) => el.name === selectedElement) ?? null) : null
@@ -95,25 +109,29 @@
 <div class="space-y-3">
 	<h3 class="text-base font-semibold text-gray-800">Layout Editor</h3>
 
-	<!-- Canvas + Popover wrapper -->
-	<div class="relative">
-		<LayoutCanvas
-			elements={template.elements}
-			{selectedElement}
-			onSelectElement={handleSelectElement}
-			onUpdateElement={handleUpdateElement}
-			onDropElement={handleDropElement}
-			onRemoveElement={handleRemoveElement}
-			onBringToFront={handleBringToFront}
-			onSendToBack={handleSendToBack}
-		/>
-		<LayoutPalettePopover elements={template.elements} {disabledElements} />
-	</div>
+	<div class="flex gap-3">
+		<!-- Canvas + Popover wrapper -->
+		<div class="relative flex-1 min-w-0" bind:this={canvasWrapperEl}>
+			<LayoutCanvas
+				elements={template.elements}
+				{selectedElement}
+				onSelectElement={handleSelectElement}
+				onUpdateElement={handleUpdateElement}
+				onDropElement={handleDropElement}
+				onRemoveElement={handleRemoveElement}
+				onBringToFront={handleBringToFront}
+				onSendToBack={handleSendToBack}
+			/>
+			<LayoutPalettePopover elements={template.elements} {disabledElements} />
+		</div>
 
-	<!-- Property Panel (fixed height, below canvas) -->
-	<LayoutPropertyPanel
-		element={selectedEl}
-		enabledCount={template.elements.filter((el) => el.enabled !== false).length}
-		onUpdateElement={handleUpdateElement}
-	/>
+		<!-- Property Panel sidebar (synced to canvas height) -->
+		<div class="w-[20%] shrink-0" style="height:{canvasHeight}px;">
+			<LayoutPropertyPanel
+				element={selectedEl}
+				enabledCount={template.elements.filter((el) => el.enabled !== false).length}
+				onUpdateElement={handleUpdateElement}
+			/>
+		</div>
+	</div>
 </div>

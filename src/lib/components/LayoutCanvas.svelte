@@ -100,6 +100,19 @@
 
 	type ContextMenuState = { x: number; y: number; elementName: ElementName } | null;
 	let contextMenu: ContextMenuState = $state(null);
+	let contextMenuEl: HTMLDivElement | undefined = $state();
+
+	// Dismiss context menu on any click outside the menu
+	$effect(() => {
+		if (contextMenu) {
+			const handler = (e: PointerEvent) => {
+				if (contextMenuEl?.contains(e.target as Node)) return;
+				contextMenu = null;
+			};
+			document.addEventListener('pointerdown', handler, true);
+			return () => document.removeEventListener('pointerdown', handler, true);
+		}
+	});
 
 	function handleContextMenu(e: MouseEvent, name: ElementName) {
 		e.preventDefault();
@@ -269,6 +282,7 @@
 	bind:this={canvasEl}
 	class="relative isolate w-full aspect-[1333/750] bg-gray-100 border border-gray-300 overflow-hidden select-none"
 	onclick={handleCanvasClick}
+	oncontextmenu={(e) => e.preventDefault()}
 	onpointermove={handlePointerMove}
 	onpointerup={handlePointerUp}
 	ondragover={handleDragOver}
@@ -304,7 +318,7 @@
 				</span>
 
 				<span
-					class="absolute bottom-0 left-0 px-0.5 text-white leading-none select-none pointer-events-none opacity-70"
+					class="absolute bottom-0 right-0 px-0.5 text-white leading-none select-none pointer-events-none opacity-70"
 					style="font-size:{Math.max(8, Math.min(10, scale * 0.7))}px;background:{color};"
 				>
 					{el.layout.zIndex}
@@ -342,19 +356,8 @@
 
 	<!-- Context menu (fixed position to escape overflow:hidden) -->
 	{#if contextMenu}
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
-			class="fixed inset-0"
-			style="z-index:999;"
-			onclick={() => {
-				contextMenu = null;
-			}}
-			oncontextmenu={(e) => {
-				e.preventDefault();
-				contextMenu = null;
-			}}
-		></div>
-		<div
+			bind:this={contextMenuEl}
 			class="fixed bg-white border border-gray-300 shadow-md py-1 text-xs font-mono"
 			style="left:{contextMenu.x}px;top:{contextMenu.y}px;z-index:1000;"
 		>
