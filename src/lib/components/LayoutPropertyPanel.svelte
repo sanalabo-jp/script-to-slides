@@ -181,7 +181,7 @@
 			</div>
 			<!-- z-index (full width row) -->
 			<label class="flex items-center gap-1 text-xs text-gray-500 mt-1.5">
-				<span class="shrink-0">z-index</span>
+				<span class="shrink-0">z-index:</span>
 				<input
 					type="number"
 					step="1"

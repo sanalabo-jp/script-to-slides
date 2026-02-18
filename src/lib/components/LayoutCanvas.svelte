@@ -318,7 +318,7 @@
 				</span>
 
 				<span
-					class="absolute bottom-0 left-0 px-0.5 text-white leading-none select-none pointer-events-none opacity-70"
+					class="absolute bottom-0 right-0 px-0.5 text-white leading-none select-none pointer-events-none opacity-70"
 					style="font-size:{Math.max(8, Math.min(10, scale * 0.7))}px;background:{color};"
 				>
 					{el.layout.zIndex}
