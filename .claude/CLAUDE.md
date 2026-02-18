@@ -221,6 +221,7 @@ src/
 | feature/manual-chat-input | 채팅 스타일 수동 대본 입력 모드 | `1849ff3` |
 | feature/pptx-template-extract | 기능1 Phase 2+3 — .pptx 추출 + 커스텀 빌더 + 버그 수정 | `da6184c` |
 | feature/slide-layout-system | 기능2 Phase 1+2 — 레이아웃 에디터 시스템 (v1.1.0) | `3ffd5b0` |
+| fix/palette-pulse-ux | 레이아웃 에디터 UX 패치 — pulse 통일 + 속성 패널 재설계 + 컨텍스트 메뉴 수정 (v1.1.1) | `581295b` |
 
 ## 해결된 주요 버그들 (beta-0.0.1)
 1. vercel.json functions 패턴 오류 → functions 키 제거
