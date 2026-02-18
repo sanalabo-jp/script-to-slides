@@ -131,7 +131,7 @@
 			</div>
 			<div class="grid grid-cols-2 gap-x-2 gap-y-1.5">
 				<label class="flex items-center gap-1 text-xs text-gray-500">
-					<span class="w-3 shrink-0">x</span>
+					<span class="w-3 shrink-0">x:</span>
 					<input
 						type="number"
 						step="0.05"
@@ -143,7 +143,7 @@
 					/>
 				</label>
 				<label class="flex items-center gap-1 text-xs text-gray-500">
-					<span class="w-3 shrink-0">y</span>
+					<span class="w-3 shrink-0">y:</span>
 					<input
 						type="number"
 						step="0.05"
@@ -155,7 +155,7 @@
 					/>
 				</label>
 				<label class="flex items-center gap-1 text-xs text-gray-500">
-					<span class="w-3 shrink-0">w</span>
+					<span class="w-3 shrink-0">w:</span>
 					<input
 						type="number"
 						step="0.05"
@@ -167,7 +167,7 @@
 					/>
 				</label>
 				<label class="flex items-center gap-1 text-xs text-gray-500">
-					<span class="w-3 shrink-0">h</span>
+					<span class="w-3 shrink-0">h:</span>
 					<input
 						type="number"
 						step="0.05"
