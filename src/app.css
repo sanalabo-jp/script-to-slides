@@ -137,53 +137,7 @@
 	animation: blink 1.2s infinite;
 }
 
-@keyframes guide-attention {
-	0% {
-		border-color: var(--color-gray-200);
-		background-color: transparent;
-	}
-	15% {
-		border-color: var(--color-gray-900);
-		background-color: var(--color-gray-100);
-	}
-	70% {
-		border-color: var(--color-gray-200);
-		background-color: transparent;
-	}
-	100% {
-		border-color: var(--color-gray-200);
-		background-color: transparent;
-	}
-}
-
-.animate-guide-attention {
-	animation: guide-attention 1.8s ease-out infinite;
-}
-
-@keyframes palette-attention {
-	0% {
-		border-color: var(--color-gray-300);
-		background-color: var(--color-white);
-	}
-	15% {
-		border-color: var(--color-gray-900);
-		background-color: var(--color-gray-300);
-	}
-	70% {
-		border-color: var(--color-gray-300);
-		background-color: var(--color-white);
-	}
-	100% {
-		border-color: var(--color-gray-300);
-		background-color: var(--color-white);
-	}
-}
-
-.animate-palette-attention {
-	animation: palette-attention 1.8s ease-out infinite;
-}
-
-@keyframes palette-flash {
+@keyframes pulse-attention {
 	0% {
 		background-color: var(--color-white);
 	}
@@ -192,6 +146,25 @@
 	}
 	100% {
 		background-color: var(--color-white);
+	}
+}
+
+.animate-pulse-attention {
+	animation: pulse-attention 1.2s ease-out infinite;
+}
+
+@keyframes palette-flash {
+	0% {
+		background-color: var(--color-white);
+		opacity: 1;
+	}
+	20% {
+		background-color: var(--color-gray-300);
+		opacity: 1;
+	}
+	100% {
+		background-color: var(--color-white);
+		opacity: 0.35;
 	}
 }
 

@@ -82,7 +82,7 @@
 	</div>
 
 	<!-- v2 Format Guide -->
-	<details class="t-card {!guideOpen ? 'animate-guide-attention' : ''}" bind:open={guideOpen}>
+	<details class="t-card {!guideOpen ? 'animate-pulse-attention' : ''}" bind:open={guideOpen}>
 		<summary
 			class="px-4 py-3 cursor-pointer text-sm text-gray-500 hover:text-gray-900 select-none flex items-center justify-between"
 		>
