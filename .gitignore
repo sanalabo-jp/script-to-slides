@@ -40,3 +40,7 @@ coverage/
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Ralph autonomous loop
+.ralph/
+.ralphrc
