@@ -40,8 +40,9 @@ RUN mkdir -p /home/node/.local/bin \
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Working directory
-RUN mkdir -p /workspace && chown node:node /workspace
+# Working directory + Claude data directory (named volume mount point, must be node-owned)
+RUN mkdir -p /workspace /home/node/.claude \
+    && chown node:node /workspace /home/node/.claude
 
 USER node
 ENV PATH="/home/node/.local/bin:$PATH"
