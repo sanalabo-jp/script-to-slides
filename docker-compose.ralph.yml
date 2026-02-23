@@ -1,0 +1,36 @@
+# Docker Compose for Ralph Worker
+# Usage:
+#   docker compose -f docker-compose.ralph.yml up --build
+#   docker compose -f docker-compose.ralph.yml run ralph-worker --calls 5 --verbose
+#   docker compose -f docker-compose.ralph.yml down -v
+
+services:
+  ralph-worker:
+    build:
+      context: docker/ralph
+    container_name: ralph-worker
+    env_file: .env.ralph
+    volumes:
+      - .:/workspace                                    # Project source (rw: Ralph writes code + git commits)
+      - ralph_node_modules:/workspace/node_modules       # Linux binaries (named volume, isolated)
+      - ~/.claude:/host-claude:ro                        # Host settings source (READ-ONLY, never modified)
+      - ralph_claude_data:/home/node/.claude              # Container-local Claude data (writable copy)
+      - ~/.ralph:/home/node/.ralph:ro                    # Ralph CLI scripts (read-only)
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      CB_PERMISSION_DENIAL_THRESHOLD: 5
+      GIT_USER_NAME: Ralph Worker
+      GIT_USER_EMAIL: ralph@script-to-slides.local
+      NODE_OPTIONS: --max-old-space-size=4096
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4G
+    stop_grace_period: 120s
+
+volumes:
+  ralph_node_modules:
+  ralph_claude_data:
