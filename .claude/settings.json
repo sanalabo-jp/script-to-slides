@@ -19,6 +19,12 @@
 						"command": "~/.claude/hooks/typecheck-svelte.sh",
 						"timeout": 60,
 						"async": true
+					},
+					{
+						"type": "command",
+						"command": "~/.claude/hooks/test-vitest.sh",
+						"timeout": 60,
+						"async": true
 					}
 				]
 			}
