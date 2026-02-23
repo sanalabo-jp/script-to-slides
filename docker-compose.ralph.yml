@@ -9,11 +9,13 @@ services:
     build:
       context: docker/ralph
     container_name: ralph-worker
+    env_file: .env.ralph
     volumes:
-      - .:/workspace                                    # Project source
-      - ralph_node_modules:/workspace/node_modules       # Linux binaries (isolated)
-      - ~/.claude:/home/node/.claude                     # OAuth + hooks + settings
-      - ~/.ralph:/home/node/.ralph:ro                    # Ralph CLI (read-only)
+      - .:/workspace                                    # Project source (rw: Ralph writes code + git commits)
+      - ralph_node_modules:/workspace/node_modules       # Linux binaries (named volume, isolated)
+      - ~/.claude:/host-claude:ro                        # Host settings source (READ-ONLY, never modified)
+      - ralph_claude_data:/home/node/.claude              # Container-local Claude data (writable copy)
+      - ~/.ralph:/home/node/.ralph:ro                    # Ralph CLI scripts (read-only)
     cap_add:
       - NET_ADMIN
       - NET_RAW
@@ -31,3 +33,4 @@ services:
 
 volumes:
   ralph_node_modules:
+  ralph_claude_data:

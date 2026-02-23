@@ -26,9 +26,15 @@ RUN npm install -g @anthropic-ai/claude-code
 COPY init-firewall.sh /usr/local/bin/init-firewall.sh
 RUN chmod +x /usr/local/bin/init-firewall.sh
 
-# Allow node user to run firewall setup without password
-RUN echo "node ALL=(ALL) NOPASSWD: /usr/local/bin/init-firewall.sh" >> /etc/sudoers.d/node-firewall \
+# Sudo permissions for node user
+RUN echo "node ALL=(ALL) NOPASSWD: /usr/local/bin/init-firewall.sh, /bin/chown" >> /etc/sudoers.d/node-firewall \
     && chmod 0440 /etc/sudoers.d/node-firewall
+
+# Ralph CLI wrapper (actual scripts via ~/.ralph bind mount)
+RUN mkdir -p /home/node/.local/bin \
+    && printf '#!/bin/bash\nexec "$HOME/.ralph/ralph_loop.sh" "$@"\n' > /home/node/.local/bin/ralph \
+    && chmod +x /home/node/.local/bin/ralph \
+    && chown -R node:node /home/node/.local
 
 # Entrypoint
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
@@ -38,6 +44,7 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 RUN mkdir -p /workspace && chown node:node /workspace
 
 USER node
+ENV PATH="/home/node/.local/bin:$PATH"
 WORKDIR /workspace
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
