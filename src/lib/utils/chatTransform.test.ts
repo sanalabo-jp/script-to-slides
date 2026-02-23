@@ -145,4 +145,36 @@ describe('buildParseResult', () => {
 		expect(result.metadata.speakers).toHaveLength(1);
 		expect(result.metadata.totalLines).toBe(2);
 	});
+
+	// === 빈 speakers 배열 ===
+
+	it('빈 speakers 배열 — 모든 슬라이드가 Unknown 화자로 처리됨', () => {
+		const messages = [
+			makeMessage({ id: 'm1', speakerId: 's1' }),
+			makeMessage({ id: 'm2', speakerId: 's2' })
+		];
+
+		const result = buildParseResult(defaultFrontMatter, messages, []);
+
+		expect(result.isValid).toBe(true);
+		expect(result.slides).toHaveLength(2);
+		result.slides.forEach((slide) => {
+			expect(slide.speaker).toEqual({ name: 'Unknown', role: 'Unknown' });
+		});
+		// 동일 화자(Unknown/Unknown) 중복 제거 → 1건
+		expect(result.metadata.speakers).toEqual([{ name: 'Unknown', role: 'Unknown' }]);
+		expect(result.metadata.totalLines).toBe(2);
+	});
+
+	// === messages + speakers 모두 빈 배열 ===
+
+	it('messages, speakers 모두 빈 배열 — isValid: false, 빈 slides, 빈 speakers', () => {
+		const result = buildParseResult(defaultFrontMatter, [], []);
+
+		expect(result.isValid).toBe(false);
+		expect(result.slides).toEqual([]);
+		expect(result.metadata.speakers).toEqual([]);
+		expect(result.metadata.totalLines).toBe(0);
+		expect(result.metadata.validLines).toBe(0);
+	});
 });
