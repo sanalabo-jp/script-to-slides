@@ -326,7 +326,7 @@ export function mergeStyles(master: ExtractedStyles, layouts: ExtractedStyles): 
 
 /**
  * Build a SlideTemplate from extracted styles and theme data.
- * Returns new elements-array structure with LECTURE_LAYOUT positions.
+ * Uses extracted layout when available, falls back to LECTURE_LAYOUT.
  */
 export function buildTemplate(
 	fileName: string,
@@ -391,6 +391,10 @@ export function buildTemplate(
 	const bgColor = styles.background || '#FFFFFF';
 	const baseName = fileName.replace(/\.pptx$/i, '');
 
+	// 레이아웃 소스 매핑 (스타일 소스와 동일)
+	const callout1LayoutPh = subtitlePh || allPhs[2];
+	const captionLayoutPh = captionPh || allPhs[allPhs.length - 1];
+
 	return {
 		id: `custom-${Date.now()}`,
 		name: baseName,
@@ -398,16 +402,24 @@ export function buildTemplate(
 		thumbnail: '',
 		background: { color: bgColor },
 		elements: [
-			{ name: 'callout1', layout: LECTURE_LAYOUT.callout1, styles: [callout1Style] },
+			{
+				name: 'callout1',
+				layout: resolveLayout(callout1LayoutPh, LECTURE_LAYOUT.callout1),
+				styles: [callout1Style]
+			},
 			{
 				name: 'callout2',
-				layout: LECTURE_LAYOUT.callout2,
+				layout: resolveLayout(undefined, LECTURE_LAYOUT.callout2),
 				styles: [callout2Primary, deriveSecondaryFontStyle(callout2Primary)]
 			},
-			{ name: 'title', layout: LECTURE_LAYOUT.title, styles: [titleStyle] },
-			{ name: 'body', layout: LECTURE_LAYOUT.body, styles: [bodyStyle] },
-			{ name: 'image', layout: LECTURE_LAYOUT.image, styles: [] },
-			{ name: 'caption', layout: LECTURE_LAYOUT.caption, styles: [captionStyle] }
+			{ name: 'title', layout: resolveLayout(titlePh, LECTURE_LAYOUT.title), styles: [titleStyle] },
+			{ name: 'body', layout: resolveLayout(bodyPh, LECTURE_LAYOUT.body), styles: [bodyStyle] },
+			{ name: 'image', layout: resolveLayout(undefined, LECTURE_LAYOUT.image), styles: [] },
+			{
+				name: 'caption',
+				layout: resolveLayout(captionLayoutPh, LECTURE_LAYOUT.caption),
+				styles: [captionStyle]
+			}
 		]
 	};
 }
