@@ -14,6 +14,7 @@
 	let fileName = $state('');
 	let parseResult: ParseResult | null = $state(null);
 	let selectedTemplate: SlideTemplate | null = $state(null);
+	let customTemplates: SlideTemplate[] = $state([]);
 	let outputFormat: 'pptx' | 'pdf' = $state('pptx');
 	let errorMsg = $state('');
 	let isLoading = $state(false);
@@ -202,6 +203,7 @@
 		<div class:hidden={templateTab !== 'custom'}>
 			<CustomTemplateTab
 				{selectedTemplate}
+				bind:customTemplates
 				onSelect={handleTemplateSelect}
 				onSwitchToPresets={() => {
 					templateTab = 'presets';

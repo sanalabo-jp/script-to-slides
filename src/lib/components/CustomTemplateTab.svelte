@@ -8,16 +8,15 @@
 
 	let {
 		selectedTemplate,
+		customTemplates = $bindable([]),
 		onSelect,
 		onSwitchToPresets
 	}: {
 		selectedTemplate: SlideTemplate | null;
+		customTemplates?: SlideTemplate[];
 		onSelect: (template: SlideTemplate) => void;
 		onSwitchToPresets: () => void;
 	} = $props();
-
-	// --- Custom templates list ---
-	let customTemplates: SlideTemplate[] = $state([]);
 
 	// --- Extract/drop state ---
 	let isDragging = $state(false);
