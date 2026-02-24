@@ -16,6 +16,9 @@ import {
 	applySatMod,
 	applySatOff,
 	applyColorModifiers,
+	emuToInch,
+	hasLayoutData,
+	resolveLayout,
 	DEFAULT_FONT,
 	DEFAULT_COLOR,
 	SCHEME_CLR_MAP,
@@ -501,5 +504,86 @@ describe('constants', () => {
 
 	it('DEFAULT_COLOR는 #434343이다', () => {
 		expect(DEFAULT_COLOR).toBe('#434343');
+	});
+});
+
+// === emuToInch ===
+
+describe('emuToInch', () => {
+	it('914400 EMU → 1.0 inch', () => {
+		expect(emuToInch(914400)).toBe(1.0);
+	});
+
+	it('0 EMU → 0.0 inch', () => {
+		expect(emuToInch(0)).toBe(0.0);
+	});
+
+	it('실제 EMU 값 변환 (457200 → 0.5)', () => {
+		expect(emuToInch(457200)).toBe(0.5);
+	});
+
+	it('0.01" 정밀도로 반올림한다 (소수점 셋째 자리 이하 절사)', () => {
+		// 1000000 EMU = 1.09361... → 1.09
+		expect(emuToInch(1000000)).toBe(1.09);
+	});
+
+	it('큰 EMU 값도 올바르게 변환한다', () => {
+		// 9144000 EMU = 10.0 inches
+		expect(emuToInch(9144000)).toBe(10.0);
+	});
+});
+
+// === hasLayoutData ===
+
+describe('hasLayoutData', () => {
+	it('x/y/w/h 4필드 모두 정의되면 true', () => {
+		const ph: PlaceholderStyle = { type: 'title', x: 0.8, y: 1.3, w: 11.7, h: 0.5 };
+		expect(hasLayoutData(ph)).toBe(true);
+	});
+
+	it('일부 필드만 있으면 false', () => {
+		const ph: PlaceholderStyle = { type: 'title', x: 0.8, y: 1.3 };
+		expect(hasLayoutData(ph)).toBe(false);
+	});
+
+	it('모두 undefined이면 false', () => {
+		const ph: PlaceholderStyle = { type: 'title' };
+		expect(hasLayoutData(ph)).toBe(false);
+	});
+
+	it('0값이어도 정의되면 true', () => {
+		const ph: PlaceholderStyle = { type: 'title', x: 0, y: 0, w: 0, h: 0 };
+		expect(hasLayoutData(ph)).toBe(true);
+	});
+});
+
+// === resolveLayout ===
+
+describe('resolveLayout', () => {
+	const fallback = { position: { x: 0.8, y: 1.3 }, size: { w: 11.7, h: 0.5 }, zIndex: 6 };
+
+	it('ph에 레이아웃 있으면 추출값 사용 + fallback.zIndex 유지', () => {
+		const ph: PlaceholderStyle = { type: 'title', x: 1.0, y: 2.0, w: 10.0, h: 1.5 };
+		const result = resolveLayout(ph, fallback);
+		expect(result.position).toEqual({ x: 1.0, y: 2.0 });
+		expect(result.size).toEqual({ w: 10.0, h: 1.5 });
+		expect(result.zIndex).toBe(6); // fallback zIndex
+	});
+
+	it('ph가 undefined이면 fallback 반환', () => {
+		const result = resolveLayout(undefined, fallback);
+		expect(result).toEqual(fallback);
+	});
+
+	it('ph에 레이아웃 없으면(x/y/w/h 미정의) fallback 반환', () => {
+		const ph: PlaceholderStyle = { type: 'title', fontSize: 28 };
+		const result = resolveLayout(ph, fallback);
+		expect(result).toEqual(fallback);
+	});
+
+	it('ph에 일부 레이아웃만 있으면(4필드 미달) fallback 반환', () => {
+		const ph: PlaceholderStyle = { type: 'title', x: 1.0, y: 2.0 };
+		const result = resolveLayout(ph, fallback);
+		expect(result).toEqual(fallback);
 	});
 });

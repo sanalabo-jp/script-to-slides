@@ -1,4 +1,4 @@
-import type { SlideTemplate, ElementFontStyle } from '$lib/types';
+import type { SlideTemplate, ElementFontStyle, ElementLayout } from '$lib/types';
 import { LECTURE_LAYOUT } from '$lib/templates/presets';
 import { deriveSecondaryFontStyle } from '$lib/templates/templateUtils';
 
@@ -37,6 +37,10 @@ export interface PlaceholderStyle {
 	fontSize?: number;
 	fontColor?: string;
 	bold?: boolean;
+	x?: number; // inches
+	y?: number; // inches
+	w?: number; // inches
+	h?: number; // inches
 }
 
 export interface ExtractedStyles {
@@ -197,6 +201,44 @@ export function applyColorModifiers(baseHex: string, colorEl: Element): string {
 	}
 
 	return result;
+}
+
+// === Layout Extraction Functions ===
+
+const EMU_PER_INCH = 914400;
+
+/**
+ * Convert EMU (English Metric Unit) to inches.
+ * 1 inch = 914400 EMU. Rounded to 0.01" precision.
+ */
+export function emuToInch(emu: number): number {
+	return Math.round((emu / EMU_PER_INCH) * 100) / 100;
+}
+
+/**
+ * Check if a PlaceholderStyle has all 4 layout fields (x, y, w, h) defined.
+ */
+export function hasLayoutData(ph: PlaceholderStyle): boolean {
+	return ph.x !== undefined && ph.y !== undefined && ph.w !== undefined && ph.h !== undefined;
+}
+
+/**
+ * Resolve layout from extracted placeholder data or fall back to preset.
+ * If ph has all 4 layout fields, use extracted values with fallback's zIndex.
+ * Otherwise, return fallback layout as-is.
+ */
+export function resolveLayout(
+	ph: PlaceholderStyle | undefined,
+	fallback: ElementLayout
+): ElementLayout {
+	if (ph && hasLayoutData(ph)) {
+		return {
+			position: { x: ph.x!, y: ph.y! },
+			size: { w: ph.w!, h: ph.h! },
+			zIndex: fallback.zIndex
+		};
+	}
+	return fallback;
 }
 
 // === Pure Functions ===
