@@ -54,17 +54,21 @@ else
 fi
 echo "hasCompletedOnboarding: OK"
 
-# --- Auth pre-check ---
-if [ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
+# --- Auth: load from Docker secret ---
+SECRET_FILE="/run/secrets/claude_oauth_token"
+if [ -f "$SECRET_FILE" ]; then
+    CLAUDE_CODE_OAUTH_TOKEN=$(cat "$SECRET_FILE")
+    export CLAUDE_CODE_OAUTH_TOKEN
+    echo "OAuth token: loaded from secret"
+elif [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
+    echo "OAuth token: loaded from env"
+else
     echo ""
-    echo "ERROR: CLAUDE_CODE_OAUTH_TOKEN is not set."
-    echo "Run this on host to extract token:"
-    echo '  security find-generic-password -s "Claude Code-credentials" -a "Claude Code" -w'
-    echo "Then save to .env.ralph:"
-    echo '  CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-...'
+    echo "ERROR: OAuth token not found."
+    echo "  Create secrets/claude_oauth_token with your token."
+    echo "  Or set CLAUDE_CODE_OAUTH_TOKEN environment variable."
     exit 1
 fi
-echo "OAuth token: detected"
 
 # --- Git config ---
 echo "[3/6] Configuring git..."

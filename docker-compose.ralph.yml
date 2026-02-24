@@ -9,7 +9,8 @@ services:
     build:
       context: docker/ralph
     container_name: ralph-worker
-    env_file: .env.ralph
+    secrets:
+      - claude_oauth_token
     volumes:
       - .:/workspace                                    # Project source (rw: Ralph writes code + git commits)
       - ralph_node_modules:/workspace/node_modules       # Linux binaries (named volume, isolated)
@@ -30,6 +31,10 @@ services:
           cpus: "2.0"
           memory: 4G
     stop_grace_period: 120s
+
+secrets:
+  claude_oauth_token:
+    file: ./secrets/claude_oauth_token
 
 volumes:
   ralph_node_modules:
