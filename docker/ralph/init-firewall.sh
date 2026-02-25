@@ -61,7 +61,6 @@ fi
 DOMAINS=(
     "registry.npmjs.org"
     "api.anthropic.com"
-    "cdn.anthropic.com"
     "statsig.anthropic.com"
     "statsig.com"
     "sentry.io"
