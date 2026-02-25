@@ -3,19 +3,47 @@ set -euo pipefail
 
 echo "=== Ralph Worker Entrypoint ==="
 
+# --- Squid proxy ---
+echo "[1/7] Starting Squid proxy..."
+if sudo squid; then
+    # Squid 시작 대기 (포트 리스닝 확인)
+    for i in $(seq 1 10); do
+        if ss -tln | grep -q ':3128'; then
+            break
+        fi
+        sleep 0.5
+    done
+    echo "Squid proxy: OK (port 3128)"
+else
+    echo "WARNING: Squid startup failed — continuing without proxy filtering"
+fi
+
 # --- Firewall ---
-echo "[1/6] Setting up firewall..."
+echo "[2/7] Setting up firewall..."
 if sudo /usr/local/bin/init-firewall.sh; then
     echo "Firewall: OK"
 else
     echo "WARNING: Firewall setup failed — continuing without network isolation"
 fi
 
+# --- Proxy verification (firewall + squid 통합 검증) ---
+echo "Verifying proxy filtering..."
+export HTTP_PROXY=http://localhost:3128
+export HTTPS_PROXY=http://localhost:3128
+export http_proxy=http://localhost:3128
+export https_proxy=http://localhost:3128
+
+if curl --connect-timeout 5 -s https://api.anthropic.com >/dev/null 2>&1; then
+    echo "PASS: api.anthropic.com reachable via proxy"
+else
+    echo "WARNING: api.anthropic.com unreachable via proxy — Claude API calls may fail"
+fi
+
 # --- Claude config setup ---
 # Host's ~/.claude is mounted read-only at /host-claude (protecting host settings).
 # Container's ~/.claude is a writable named volume.
 # Sync host settings into the writable volume on each start.
-echo "[2/6] Syncing Claude config from host..."
+echo "[3/7] Syncing Claude config from host..."
 HOST_CLAUDE="/host-claude"
 if [ -d "$HOST_CLAUDE" ]; then
     # Sync settings, hooks, rules from host (overwrite each start for freshness)
@@ -70,25 +98,26 @@ else
 fi
 
 # --- Git config ---
-echo "[3/6] Configuring git..."
+echo "[4/7] Configuring git..."
 git config --global user.name "${GIT_USER_NAME:-Ralph Worker}"
 git config --global user.email "${GIT_USER_EMAIL:-ralph@local}"
 git config --global --add safe.directory /workspace
 
 # --- Dependencies ---
-echo "[4/6] Installing dependencies..."
+echo "[5/7] Installing dependencies..."
 cd /workspace
 sudo chown -R node:node /workspace/node_modules 2>/dev/null || true
 npm ci
 
 # --- Claude CLI check ---
-echo "[5/6] Verifying Claude CLI..."
+echo "[6/7] Verifying Claude CLI..."
 claude --version
 
 # --- Ralph execution ---
-echo "[6/6] Starting Ralph..."
+echo "[7/7] Starting Ralph..."
 echo "  Working directory: $(pwd)"
 echo "  Node: $(node --version)"
+echo "  Proxy: http://localhost:3128"
 echo "  Claude mount: /host-claude (ro) → ~/.claude (writable copy)"
 echo "=========================="
 
