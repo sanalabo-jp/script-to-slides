@@ -4,7 +4,7 @@
 
 FROM node:22-slim
 
-# System dependencies
+# System dependencies (squid for domain-level proxy filtering)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     git \
@@ -14,21 +14,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     procps \
     curl \
     iptables \
-    ipset \
     iproute2 \
-    dnsutils \
-    aggregate \
+    squid \
     && rm -rf /var/lib/apt/lists/*
 
 # Claude Code CLI
 RUN npm install -g @anthropic-ai/claude-code
 
+# Squid log directory
+RUN mkdir -p /var/log/squid \
+    && chown proxy:proxy /var/log/squid
+
+# Squid config
+COPY squid.conf /etc/squid/squid.conf
+
 # Firewall script
 COPY init-firewall.sh /usr/local/bin/init-firewall.sh
 RUN chmod +x /usr/local/bin/init-firewall.sh
 
-# Sudo permissions for node user
-RUN echo "node ALL=(ALL) NOPASSWD: /usr/local/bin/init-firewall.sh, /bin/chown" >> /etc/sudoers.d/node-firewall \
+# Sudo permissions for node user (firewall + squid + chown)
+RUN echo "node ALL=(ALL) NOPASSWD: /usr/local/bin/init-firewall.sh, /bin/chown, /usr/sbin/squid" >> /etc/sudoers.d/node-firewall \
     && chmod 0440 /etc/sudoers.d/node-firewall
 
 # Ralph CLI wrapper (actual scripts via ~/.ralph bind mount)
