@@ -95,4 +95,37 @@ describe('parsePptxTemplate (통합)', () => {
 		});
 		await expect(parsePptxTemplate(fakeFile)).rejects.toThrow();
 	});
+
+	it('추출된 layout의 position/size가 유효 범위 내에 있다', async () => {
+		const file = loadPptxAsFile('sample/templates/clean-minimal.pptx');
+		const result = await parsePptxTemplate(file);
+
+		for (const el of result.template.elements) {
+			// position: 0 이상, 슬라이드 영역 내 (widescreen 13.33" × 7.5")
+			expect(el.layout.position.x).toBeGreaterThanOrEqual(0);
+			expect(el.layout.position.y).toBeGreaterThanOrEqual(0);
+			expect(el.layout.position.x).toBeLessThanOrEqual(13.34);
+			expect(el.layout.position.y).toBeLessThanOrEqual(7.5);
+
+			// size: 양수
+			expect(el.layout.size.w).toBeGreaterThan(0);
+			expect(el.layout.size.h).toBeGreaterThan(0);
+
+			// zIndex: 양의 정수
+			expect(el.layout.zIndex).toBeGreaterThan(0);
+		}
+	});
+
+	it('callout2와 image는 항상 LECTURE_LAYOUT 폴백 위치를 사용한다', async () => {
+		const file = loadPptxAsFile('sample/templates/clean-minimal.pptx');
+		const result = await parsePptxTemplate(file);
+
+		const callout2 = findElement(result.template.elements, 'callout2')!;
+		expect(callout2.layout.position).toEqual({ x: 0.8, y: 0.7 });
+		expect(callout2.layout.size).toEqual({ w: 11.7, h: 0.35 });
+
+		const image = findElement(result.template.elements, 'image')!;
+		expect(image.layout.position).toEqual({ x: 8.2, y: 2.1 });
+		expect(image.layout.size).toEqual({ w: 4.33, h: 3.25 });
+	});
 });

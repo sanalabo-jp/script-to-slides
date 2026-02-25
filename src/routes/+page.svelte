@@ -13,7 +13,12 @@
 	let templateTab: 'presets' | 'custom' = $state('presets');
 	let fileName = $state('');
 	let parseResult: ParseResult | null = $state(null);
-	let selectedTemplate: SlideTemplate | null = $state(null);
+	let presetSelection: SlideTemplate | null = $state(null);
+	let customSelection: SlideTemplate | null = $state(null);
+	let selectedTemplate: SlideTemplate | null = $derived(
+		templateTab === 'presets' ? presetSelection : customSelection
+	);
+	let customTemplates: SlideTemplate[] = $state([]);
 	let outputFormat: 'pptx' | 'pdf' = $state('pptx');
 	let errorMsg = $state('');
 	let isLoading = $state(false);
@@ -46,8 +51,12 @@
 		step = 'preview';
 	}
 
-	function handleTemplateSelect(template: SlideTemplate) {
-		selectedTemplate = template;
+	function handleTemplateSelect(template: SlideTemplate | null) {
+		if (templateTab === 'presets') {
+			presetSelection = template;
+		} else {
+			customSelection = template;
+		}
 	}
 
 	function handleProceedToTemplate() {
@@ -92,7 +101,8 @@
 		inputMode = 'file';
 		fileName = '';
 		parseResult = null;
-		selectedTemplate = null;
+		presetSelection = null;
+		customSelection = null;
 		errorMsg = '';
 		isLoading = false;
 	}
@@ -183,14 +193,12 @@
 			<button
 				class="input-tab {templateTab === 'presets' ? 'input-tab-active' : ''}"
 				onclick={() => {
-					selectedTemplate = null;
 					templateTab = 'presets';
 				}}>Presets</button
 			>
 			<button
 				class="input-tab {templateTab === 'custom' ? 'input-tab-active' : ''}"
 				onclick={() => {
-					selectedTemplate = null;
 					templateTab = 'custom';
 				}}>Custom</button
 			>
@@ -202,6 +210,7 @@
 		<div class:hidden={templateTab !== 'custom'}>
 			<CustomTemplateTab
 				{selectedTemplate}
+				bind:customTemplates
 				onSelect={handleTemplateSelect}
 				onSwitchToPresets={() => {
 					templateTab = 'presets';
@@ -249,6 +258,8 @@
 			<button
 				class="t-btn-text"
 				onclick={() => {
+					presetSelection = null;
+					customSelection = null;
 					step = 'preview';
 				}}
 			>
@@ -281,7 +292,11 @@
 			initialTemplate={selectedTemplate}
 			disabledElements={['image']}
 			onChange={(t) => {
-				selectedTemplate = t;
+				if (templateTab === 'presets') {
+					presetSelection = t;
+				} else {
+					customSelection = t;
+				}
 			}}
 		/>
 

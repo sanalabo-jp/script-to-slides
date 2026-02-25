@@ -8,22 +8,22 @@
 
 	let {
 		selectedTemplate,
+		customTemplates = $bindable([]),
 		onSelect,
 		onSwitchToPresets
 	}: {
 		selectedTemplate: SlideTemplate | null;
-		onSelect: (template: SlideTemplate) => void;
+		customTemplates?: SlideTemplate[];
+		onSelect: (template: SlideTemplate | null) => void;
 		onSwitchToPresets: () => void;
 	} = $props();
-
-	// --- Custom templates list ---
-	let customTemplates: SlideTemplate[] = $state([]);
 
 	// --- Extract/drop state ---
 	let isDragging = $state(false);
 	let isLoading = $state(false);
 	let errorMsg = $state('');
 	let extractWarnings: string[] = $state([]);
+	let showLayoutBetaNotice = $state(false);
 
 	// --- Editor state ---
 	type EditorMode = 'none' | 'new-extract' | 'new-scratch' | 'edit';
@@ -51,6 +51,7 @@
 	async function handleFiles(files: FileList | File[]) {
 		errorMsg = '';
 		extractWarnings = [];
+		showLayoutBetaNotice = false;
 		autoSaveEditorIfNeeded();
 
 		const pptxFiles = Array.from(files).filter(isPptx);
@@ -84,7 +85,10 @@
 			}
 		}
 
-		if (lastAdded) onSelect(lastAdded);
+		if (lastAdded) {
+			onSelect(lastAdded);
+			showLayoutBetaNotice = true;
+		}
 		isLoading = false;
 	}
 
@@ -148,9 +152,13 @@
 		const deletedId = customTemplates[index].id;
 		customTemplates.splice(index, 1);
 
-		// If deleted template was selected, select first remaining
-		if (selectedTemplate?.id === deletedId && customTemplates.length > 0) {
-			onSelect($state.snapshot(customTemplates[0]));
+		// If deleted template was selected, select first remaining or clear
+		if (selectedTemplate?.id === deletedId) {
+			if (customTemplates.length > 0) {
+				onSelect($state.snapshot(customTemplates[0]));
+			} else {
+				onSelect(null);
+			}
 		}
 	}
 
@@ -274,7 +282,9 @@
 								? `Drop .pptx or click to extract styles (${customTemplates.length} templates)`
 								: 'Drop .pptx or click to extract styles'}
 					</p>
-					<p class="text-xs text-gray-400">.pptx (PowerPoint)</p>
+					<p class="text-xs text-gray-400">
+						.pptx (PowerPoint) <span class="text-yellow-600 font-semibold">[beta]</span>
+					</p>
 				{/if}
 				<input
 					id="pptx-input"
@@ -295,6 +305,16 @@
 						<button class="t-btn text-xs" onclick={handleCreateScratch}>[build from scratch]</button
 						>
 					</div>
+				</div>
+			{/if}
+
+			<!-- Layout beta notice -->
+			{#if showLayoutBetaNotice}
+				<div class="border-l-2 border-yellow-400 bg-yellow-50 px-3 py-2">
+					<p class="text-[10px] text-yellow-700">
+						<span class="font-semibold">[beta]</span> 배치 정보는 beta 기능입니다. 레이아웃 에디터에서
+						조정해주세요.
+					</p>
 				</div>
 			{/if}
 

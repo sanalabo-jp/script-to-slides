@@ -10,7 +10,8 @@ import {
 	resolveFont,
 	mergeStyles,
 	buildTemplate,
-	applyColorModifiers
+	applyColorModifiers,
+	emuToInch
 } from './pptxTemplateUtils';
 
 // === Public API ===
@@ -154,8 +155,36 @@ function extractPlaceholders(doc: Document, theme: ThemeData): PlaceholderStyle[
 
 		const phType = phEl.getAttribute('type') || 'body';
 		const style = extractTextStyle(sp, theme);
+		const layout = extractShapeLayout(sp);
 
-		result.push({ type: phType, ...style });
+		result.push({ type: phType, ...style, ...layout });
+	}
+
+	return result;
+}
+
+function extractShapeLayout(sp: Element): Pick<PlaceholderStyle, 'x' | 'y' | 'w' | 'h'> {
+	const result: Pick<PlaceholderStyle, 'x' | 'y' | 'w' | 'h'> = {};
+	const spPr = sp.getElementsByTagName('p:spPr')[0];
+	if (!spPr) return result;
+
+	const xfrm = spPr.getElementsByTagName('a:xfrm')[0];
+	if (!xfrm) return result;
+
+	const off = xfrm.getElementsByTagName('a:off')[0];
+	if (off) {
+		const xVal = parseInt(off.getAttribute('x') || '', 10);
+		const yVal = parseInt(off.getAttribute('y') || '', 10);
+		if (!isNaN(xVal)) result.x = emuToInch(xVal);
+		if (!isNaN(yVal)) result.y = emuToInch(yVal);
+	}
+
+	const ext = xfrm.getElementsByTagName('a:ext')[0];
+	if (ext) {
+		const cxVal = parseInt(ext.getAttribute('cx') || '', 10);
+		const cyVal = parseInt(ext.getAttribute('cy') || '', 10);
+		if (!isNaN(cxVal)) result.w = emuToInch(cxVal);
+		if (!isNaN(cyVal)) result.h = emuToInch(cyVal);
 	}
 
 	return result;
