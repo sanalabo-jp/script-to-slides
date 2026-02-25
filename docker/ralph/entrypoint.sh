@@ -4,13 +4,12 @@ set -euo pipefail
 echo "=== Ralph Worker Entrypoint ==="
 
 # --- Firewall ---
-# TODO: 방화벽 디버깅 후 재활성화
-echo "[1/6] Firewall: SKIPPED (debugging)"
-# if sudo /usr/local/bin/init-firewall.sh; then
-#     echo "Firewall: OK"
-# else
-#     echo "WARNING: Firewall setup failed — continuing without network isolation"
-# fi
+echo "[1/6] Setting up firewall..."
+if sudo /usr/local/bin/init-firewall.sh; then
+    echo "Firewall: OK"
+else
+    echo "WARNING: Firewall setup failed — continuing without network isolation"
+fi
 
 # --- Claude config setup ---
 # Host's ~/.claude is mounted read-only at /host-claude (protecting host settings).

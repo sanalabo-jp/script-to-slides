@@ -6,6 +6,7 @@ FROM node:22-slim
 
 # System dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
     git \
     jq \
     sudo \
