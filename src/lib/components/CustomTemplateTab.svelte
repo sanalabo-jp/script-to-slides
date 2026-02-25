@@ -14,7 +14,7 @@
 	}: {
 		selectedTemplate: SlideTemplate | null;
 		customTemplates?: SlideTemplate[];
-		onSelect: (template: SlideTemplate) => void;
+		onSelect: (template: SlideTemplate | null) => void;
 		onSwitchToPresets: () => void;
 	} = $props();
 
@@ -152,9 +152,13 @@
 		const deletedId = customTemplates[index].id;
 		customTemplates.splice(index, 1);
 
-		// If deleted template was selected, select first remaining
-		if (selectedTemplate?.id === deletedId && customTemplates.length > 0) {
-			onSelect($state.snapshot(customTemplates[0]));
+		// If deleted template was selected, select first remaining or clear
+		if (selectedTemplate?.id === deletedId) {
+			if (customTemplates.length > 0) {
+				onSelect($state.snapshot(customTemplates[0]));
+			} else {
+				onSelect(null);
+			}
 		}
 	}
 
