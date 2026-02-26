@@ -5,7 +5,7 @@
 - **대본 형식**: `name[role]: (description) dialogue` — 각 줄이 1개 슬라이드
 - **배포 URL**: https://script-to-slides-five.vercel.app
 - **GitHub**: sanalabo-jp/script-to-slides
-- **현재 버전**: v1.2.0
+- **현재 버전**: v1.2.1
 
 ## 브랜치 전략
 - **main**: 안정 릴리스 브랜치. feature/fix 브랜치의 머지 대상
