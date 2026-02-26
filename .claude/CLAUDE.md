@@ -5,7 +5,7 @@
 - **대본 형식**: `name[role]: (description) dialogue` — 각 줄이 1개 슬라이드
 - **배포 URL**: https://script-to-slides-five.vercel.app
 - **GitHub**: sanalabo-jp/script-to-slides
-- **현재 버전**: v1.1.2
+- **현재 버전**: v1.2.0
 
 ## 브랜치 전략
 - **main**: 안정 릴리스 브랜치. feature/fix 브랜치의 머지 대상
@@ -51,6 +51,11 @@ src/
 │   │   ├── scriptParser.ts         # 대본 텍스트 파싱
 │   │   ├── pptxTemplateParser.ts   # .pptx → SlideTemplate 추출
 │   │   └── pptxTemplateUtils.ts    # 파서 순수 함수 (색상 modifier, HSL 변환 등)
+│   ├── nlp/
+│   │   ├── tokenizer.ts              # Intl.Segmenter 기반 다국어 토큰화
+│   │   ├── stopwords.ts              # 한/영/일 정지어 목록
+│   │   ├── keywordExtractor.ts       # TF 기반 키워드 추출
+│   │   └── index.ts                  # 통합 함수 (tokenizeSlides, enrichSlideData)
 │   ├── templates/
 │   │   ├── presets.ts              # 프리셋 3종 + LECTURE_LAYOUT 좌표
 │   │   ├── templateUtils.ts        # 템플릿 유틸 (findElement, deriveSecondaryFontStyle 등)
@@ -131,7 +136,7 @@ src/
 | **기능2** 레이아웃 | Phase 1-3 완료 | elements 배열 + 에디터 + .pptx 배치 추출 |
 | **기능3** | 미착수 | 관련 시각적 정보 색인 |
 | **기능4** | 미착수 | 관련 외부 정보 색인 |
-| **기능5** | 미착수 | 대사 토큰화 및 핵심 추출 |
+| **기능5** | Phase 1 완료 | 대사 토큰화 및 핵심 추출 (Intl.Segmenter + TF) |
 | **기능6** | 미착수 | 듀얼 출력 (.pptx + Google Slides) |
 
 ### 핵심 타입 구조 (기능2)
