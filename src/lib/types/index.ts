@@ -154,6 +154,30 @@ export interface GeminiAnalysisResult {
 	slides: SlideAnalysis[];
 }
 
+// === NLP Types (기능5) ===
+
+export type SupportedLanguage = 'ko' | 'en' | 'ja';
+export type DetectedLanguage = SupportedLanguage | 'mixed';
+
+export interface SlideTokenData {
+	lineNumber: number;
+	tokens: string[];
+	keywords: string[];
+	keywordScores: Record<string, number>;
+}
+
+export interface TokenizationResult {
+	slides: SlideTokenData[];
+	globalKeywords: string[];
+	language: DetectedLanguage;
+}
+
+export interface TokenizerConfig {
+	language?: SupportedLanguage | 'auto';
+	maxKeywords?: number;
+	minTokenLength?: number;
+}
+
 // === Chat Input Types ===
 
 export interface ChatMessage {
